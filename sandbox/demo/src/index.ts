@@ -8,11 +8,19 @@ const worker = useWorker({
     )
     return response.json()
   },
+  calculatePi: async () => {
+    let pi = 0
+    for (let i = 0; i < 1000000000; i++) {
+      pi += Math.pow(-1, i) / (2 * i + 1)
+    }
+    return pi * 4
+  },
 })
 
 await Promise.all([
   worker.add(1, 2).then(console.log),
   worker.getUser(1).then(console.log),
+  worker.calculatePi().then(console.log),
 ])
 
 worker.exit()
