@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
-    "module": "ES2020",
+    "module": "ESNext",
     "lib": ["ESNext"],
     "types": ["node"],
     "moduleResolution": "Node",

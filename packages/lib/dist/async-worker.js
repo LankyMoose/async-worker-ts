@@ -1,6 +1,6 @@
 export class AsyncWorker {
     constructor(procMap) {
-        Object.defineProperty(this, "procMap", {
+        Object.defineProperty(this, "serializedProcMap", {
             enumerable: true,
             configurable: true,
             writable: true,
@@ -24,15 +24,8 @@ export class AsyncWorker {
             writable: true,
             value: undefined
         });
-        this.procMap = procMap;
+        this.serializedProcMap = serializeProcMap(procMap);
         this.init();
-    }
-    serializeProcMap() {
-        return Object.entries(this.procMap).reduce((acc, [key, value]) => {
-            // @ts-ignore
-            acc[key] = value.toString();
-            return acc;
-        }, {});
     }
     async init() {
         if (this.initialization)
@@ -43,14 +36,17 @@ export class AsyncWorker {
                     ? (await import("worker_threads")).Worker
                     : Worker;
                 this.worker = new ctor(new URL(this.isNode ? "./worker.node.js" : "./worker.js", import.meta.url), {
-                    workerData: this.serializeProcMap(),
+                    workerData: this.serializedProcMap,
                 });
                 if (!this.isNode) {
-                    this.worker.postMessage(this.serializeProcMap());
-                    this.worker.addEventListener("message", (e) => {
-                        if (e.data === "initialized")
+                    this.worker.postMessage(this.serializedProcMap);
+                    const connectHandler = async (e) => {
+                        if (e.data === "initialized") {
+                            removeEvtListener(this.worker, connectHandler);
                             resolve(this);
-                    });
+                        }
+                    };
+                    addEvtListener(this.worker, connectHandler);
                 }
                 else {
                     resolve(this);
@@ -63,9 +59,12 @@ export class AsyncWorker {
         return this;
     }
     async deInit() {
-        if (!this.worker)
+        const w = await this.getWorker();
+        if (!w)
             return;
-        await this.worker.terminate();
+        if (this.isNode)
+            w.unref();
+        await w.terminate();
         this.worker = undefined;
         this.initialization = undefined;
     }
@@ -95,6 +94,13 @@ export class AsyncWorker {
             w.postMessage({ id, key, args });
         });
     }
+}
+function serializeProcMap(procMap) {
+    return Object.entries(procMap).reduce((acc, [key, value]) => {
+        // @ts-ignore
+        acc[key] = value.toString();
+        return acc;
+    }, {});
 }
 function removeEvtListener(w, handler) {
     if ("window" in globalThis) {

@@ -5,5 +5,5 @@ export default function useWorker(procMap) {
         // @ts-ignore
         acc[key] = async (...args) => worker.call(key, ...args);
         return acc;
-    }, { deInit: worker.deInit });
+    }, { exit: () => worker.deInit() });
 }

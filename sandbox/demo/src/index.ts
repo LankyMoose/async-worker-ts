@@ -10,11 +10,15 @@ const worker = useWorker({
   },
 })
 
-async function main() {
-  const num = await worker.add(1, 2)
-  const user = await worker.getUser(1)
-  console.log(num, user)
-  await worker.deInit()
-}
+await Promise.all([
+  worker.add(1, 2).then(console.log),
+  worker.getUser(1).then(console.log),
+])
 
-main()
+worker.exit()
+
+// const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms))
+
+// sleep(50)
+
+//process.exit()
