@@ -4,22 +4,14 @@ type NodeWorker = import("worker_threads").Worker
 type SomeWorker = NodeWorker | Worker
 
 export class AsyncWorker<T extends ProcMap> {
-  private procMap: T
+  private serializedProcMap: Record<string, string>
   private worker: SomeWorker | undefined = undefined
   private isNode = typeof window === "undefined"
   initialization: Promise<this> | undefined = undefined
 
   constructor(procMap: T) {
-    this.procMap = procMap
+    this.serializedProcMap = serializeProcMap(procMap)
     this.init()
-  }
-
-  serializeProcMap() {
-    return Object.entries(this.procMap).reduce((acc, [key, value]) => {
-      // @ts-ignore
-      acc[key] = value.toString()
-      return acc
-    }, {} as Record<string, string>)
   }
 
   async init() {
@@ -36,14 +28,18 @@ export class AsyncWorker<T extends ProcMap> {
             import.meta.url
           ),
           {
-            workerData: this.serializeProcMap(),
+            workerData: this.serializedProcMap,
           }
         ) as SomeWorker
         if (!this.isNode) {
-          this.worker.postMessage(this.serializeProcMap())
-          ;(this.worker as Worker).addEventListener("message", (e) => {
-            if (e.data === "initialized") resolve(this)
-          })
+          this.worker.postMessage(this.serializedProcMap)
+          const connectHandler = async (e: MessageEvent) => {
+            if (e.data === "initialized") {
+              removeEvtListener(this.worker as Worker, connectHandler)
+              resolve(this)
+            }
+          }
+          addEvtListener(this.worker as Worker, connectHandler)
         } else {
           resolve(this)
         }
@@ -91,6 +87,14 @@ export class AsyncWorker<T extends ProcMap> {
       w.postMessage({ id, key, args })
     })
   }
+}
+
+function serializeProcMap<T extends ProcMap>(procMap: T) {
+  return Object.entries(procMap).reduce((acc, [key, value]) => {
+    // @ts-ignore
+    acc[key] = value.toString()
+    return acc
+  }, {} as Record<string, string>)
 }
 
 function removeEvtListener(
