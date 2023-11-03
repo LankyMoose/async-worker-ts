@@ -7,12 +7,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\"",
     "build": "tsc",
-    "dev": "tsc && node dist/index.js"
+    "dev": "tsc && awt-compile dist/index.js && node dist/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "my-package": "workspace:^"
+    "async-worker-ts": "workspace:^"
+  },
+  "devDependencies": {
+    "awt-compile": "workspace:^"
   }
 }
