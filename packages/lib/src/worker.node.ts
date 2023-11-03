@@ -11,9 +11,9 @@ if (!isMainThread && parentPort) {
     const pp = parentPort as MessagePort
     try {
       const result = await procMap[key](...args)
-      pp.postMessage({ id, result })
+      pp.postMessage({ data: { id, result } })
     } catch (error) {
-      pp.postMessage({ id, error })
+      pp.postMessage({ data: { id, error } })
     }
   })
 }

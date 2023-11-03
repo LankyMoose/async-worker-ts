@@ -54,6 +54,13 @@ export class AsyncWorker<T extends ProcMap> {
     return this
   }
 
+  async deInit() {
+    if (!this.worker) return
+    await this.worker.terminate()
+    this.worker = undefined
+    this.initialization = undefined
+  }
+
   async getWorker() {
     if (!this.worker) {
       await this.init()
