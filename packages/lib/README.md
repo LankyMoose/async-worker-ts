@@ -22,6 +22,8 @@ const worker = useWorker({
 
 worker.add(1, 2).then(console.log) // 3
 worker.calculatePi().then(console.log) // 3.1415926525880504
+
+worker.exit() // Terminates the worker thread
 ```
 
 ## _Concessions_
