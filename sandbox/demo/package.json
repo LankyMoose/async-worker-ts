@@ -14,5 +14,8 @@
   "license": "ISC",
   "dependencies": {
     "async-worker-ts": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.10"
   }
 }
