@@ -16,7 +16,7 @@ async function main() {
     worker.add(1, 2).then(console.log),
     worker.getUser(1).then(console.log),
   ])
-  await worker.deInit()
+  await worker.exit()
 }
 
 export function setupCounter(element: HTMLButtonElement) {
