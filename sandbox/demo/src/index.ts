@@ -1,22 +1,17 @@
 import useWorker from "async-worker-ts"
 
-let userId = 1
-
-const loadTodos = async () => {
-  const todos = await fetch("https://jsonplaceholder.typicode.com/todos", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${userId}`,
-    },
-  })
-  return todos.json()
-}
+const worker = useWorker({
+  add: async (a: number, b: number) => a + b,
+  getUser: async (userId: string) => {
+    const response = await fetch(
+      `https://jsonplaceholder.typicode.com/users/${userId}`
+    )
+    return response.json()
+  },
+})
 
 async function main() {
-  const num = await useWorker(async () =>
-    loadTodos().then((todos) => todos.length)
-  )
+  const num = await worker.add(1, 2)
   console.log(num)
 }
 
