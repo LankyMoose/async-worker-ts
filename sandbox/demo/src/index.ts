@@ -1,4 +1,4 @@
-import { useWorker } from "async-worker-ts"
+import useWorker from "async-worker-ts"
 
 let userId = 1
 

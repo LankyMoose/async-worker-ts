@@ -16,8 +16,9 @@ const file = fs.readFileSync(entry, "utf-8")
 
 const tokens = esprima.tokenize(file, { loc: true })
 
-log("tokens", tokens)
+//log("tokens", tokens)
 
 const ast = esprima.parseModule(file, { loc: true })
 
-log("ast", ast)
+//log("ast", ast)
+log(ast.body[0])
