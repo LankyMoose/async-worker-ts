@@ -1,9 +1,9 @@
-import type { ProcMap } from "./types"
+import type { IProcMap, PromiseFunc } from "./types.js"
 
 type NodeWorker = import("worker_threads").Worker
 type SomeWorker = NodeWorker | Worker
 
-export class AsyncWorker<T extends ProcMap> {
+export class AsyncWorker<T extends IProcMap> {
   private serializedProcMap: Record<string, string>
   private worker: SomeWorker | undefined = undefined
   private isNode = typeof window === "undefined"
@@ -67,10 +67,10 @@ export class AsyncWorker<T extends ProcMap> {
     return this.worker as SomeWorker
   }
 
-  call<K extends keyof T>(
+  call<K extends keyof T, U extends PromiseFunc>(
     key: K,
-    ...args: Parameters<T[K]>
-  ): Promise<ReturnType<T[K]>> {
+    ...args: Parameters<U>
+  ): Promise<ReturnType<U>> {
     return new Promise(async (resolve, reject) => {
       const w = await this.getWorker()
       const id = Math.random().toString(36).slice(2)
@@ -92,7 +92,7 @@ export class AsyncWorker<T extends ProcMap> {
   }
 }
 
-function serializeProcMap<T extends ProcMap>(procMap: T) {
+function serializeProcMap<T extends IProcMap>(procMap: T) {
   return Object.entries(procMap).reduce((acc, [key, value]) => {
     // @ts-ignore
     acc[key] = value.toString()
