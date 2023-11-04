@@ -19,8 +19,8 @@ onmessage = async (e) => {
         postMessage({ id, error });
     }
 };
-function deserializeProcMap(serializedProcMap) {
-    return Object.entries(serializedProcMap).reduce((acc, [key, value]) => {
+function deserializeProcMap(procMap) {
+    return Object.entries(procMap).reduce((acc, [key, value]) => {
         acc[key] = eval(`(${value})`);
         return acc;
     }, {});

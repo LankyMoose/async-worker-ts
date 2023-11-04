@@ -13,4 +13,7 @@ export class Task {
             value: args
         });
     }
+    serialize() {
+        return this.fn.toString();
+    }
 }

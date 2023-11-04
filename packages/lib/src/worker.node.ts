@@ -18,8 +18,9 @@ if (!isMainThread && parentPort) {
   })
 }
 
-function deserializeProcMap(serializedProcMap: Record<string, string>) {
-  return Object.entries(serializedProcMap).reduce((acc, [key, value]) => {
+function deserializeProcMap(procMap: Record<string, string>) {
+  //console.log("deserializeProcMap", procMap)
+  return Object.entries(procMap).reduce((acc, [key, value]) => {
     acc[key] = eval(`(${value})`)
     return acc
   }, {} as Record<string, (...args: any[]) => Promise<any>>)

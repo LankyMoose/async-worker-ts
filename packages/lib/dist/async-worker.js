@@ -1,3 +1,4 @@
+import { Task } from "./task.js";
 export class AsyncWorker {
     constructor(procMap) {
         Object.defineProperty(this, "serializedProcMap", {
@@ -98,7 +99,7 @@ export class AsyncWorker {
 function serializeProcMap(procMap) {
     return Object.entries(procMap).reduce((acc, [key, value]) => {
         // @ts-ignore
-        acc[key] = value.toString();
+        acc[key] = value instanceof Task ? value.serialize() : value.toString();
         return acc;
     }, {});
 }

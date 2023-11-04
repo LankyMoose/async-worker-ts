@@ -1,4 +1,6 @@
-import useWorker from "async-worker-ts"
+import useWorker, { task } from "async-worker-ts"
+
+const args = [1, 2] as [number, number]
 
 const worker = useWorker({
   add: async (a: number, b: number) => a + b,
@@ -15,15 +17,22 @@ const worker = useWorker({
     }
     return pi * 4
   },
+  addTask: task((a: number, b: number) => a + b, args),
 })
 
-await Promise.all([
-  worker.add(1, 2).then(console.log),
-  worker.getUser(1).then(console.log),
-  worker.calculatePi().then(console.log),
-])
+setInterval(() => {
+  args[0]++
+  worker.addTask().then(console.log)
+}, 1000)
 
-worker.exit()
+// await Promise.all([
+//   //worker.add(1, 2).then(console.log),
+//   //worker.getUser(1).then(console.log),
+//   //worker.calculatePi().then(console.log),
+//   ,
+// ])
+
+//await worker.exit()
 
 // const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms))
 

@@ -1,3 +1,4 @@
+import { Task } from "./task.js"
 import type { IProcMap, PromiseFunc } from "./types.js"
 
 type NodeWorker = import("worker_threads").Worker
@@ -95,7 +96,7 @@ export class AsyncWorker<T extends IProcMap> {
 function serializeProcMap<T extends IProcMap>(procMap: T) {
   return Object.entries(procMap).reduce((acc, [key, value]) => {
     // @ts-ignore
-    acc[key] = value.toString()
+    acc[key] = value instanceof Task ? value.serialize() : value.toString()
     return acc
   }, {} as Record<string, string>)
 }
