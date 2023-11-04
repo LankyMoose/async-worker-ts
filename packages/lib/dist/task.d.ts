@@ -1,5 +1,5 @@
-export declare class Task<T extends readonly unknown[], R> {
-    readonly fn: (...args: T) => R;
+export declare class Task<const T extends readonly unknown[], U extends T, R> {
+    readonly fn: (...args: U) => R;
     readonly args: T;
-    constructor(fn: (...args: T) => R, args: T);
+    constructor(fn: (...args: U) => R, args: T);
 }

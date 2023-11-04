@@ -1,3 +1,3 @@
-export class Task<T extends readonly unknown[], R> {
-  constructor(public readonly fn: (...args: T) => R, public readonly args: T) {}
+export class Task<const T extends readonly unknown[], U extends T, R> {
+  constructor(public readonly fn: (...args: U) => R, public readonly args: T) {}
 }

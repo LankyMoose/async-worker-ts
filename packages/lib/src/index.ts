@@ -28,7 +28,7 @@ const worker = useWorker({
     }
     return pi * 4
   },
-  test: new Task((a, b) => a + b, [1, 2]),
+  test: new Task((a, b, c) => a + b + c, [1, 2, "asd"]),
 })
 
-const res = worker.test.fn(...worker.test.args)
+//const res = worker.test.fn(...worker.test.args)
