@@ -1,6 +1,6 @@
 import { AsyncWorker } from "./async-worker.js"
 import { Task } from "./task.js"
-import { IProcMap, UseWorkerResult } from "./types.js"
+import { IProcMap, AsyncWorkerClient } from "./types.js"
 
 export default function useWorker<const T extends IProcMap>(procMap: T) {
   const worker = new AsyncWorker(procMap)
@@ -20,8 +20,8 @@ export default function useWorker<const T extends IProcMap>(procMap: T) {
         [key]: async (...args: any[]) => worker.call(key, ...args),
       })
     },
-    { exit: () => worker.deInit() } as UseWorkerResult<T>
-  ) as UseWorkerResult<T>
+    { exit: () => worker.exit() } as AsyncWorkerClient<T>
+  ) as AsyncWorkerClient<T>
 }
 
 export function task<const T extends readonly unknown[], U extends T, V>(

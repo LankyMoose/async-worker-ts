@@ -13,7 +13,7 @@ export default function useWorker(procMap) {
         return Object.assign(acc, {
             [key]: async (...args) => worker.call(key, ...args),
         });
-    }, { exit: () => worker.deInit() });
+    }, { exit: () => worker.exit() });
 }
 export function task(fn, args) {
     return Object.assign(new Task(fn, []), {
