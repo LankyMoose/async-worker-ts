@@ -17,6 +17,6 @@ export default function useWorker(procMap) {
 }
 export function task(fn, args) {
     return Object.assign(new Task(fn, []), {
-        getArgs: () => (typeof args === "function" ? args() : args),
+        getArgs: typeof args === "function" ? args : () => args,
     });
 }

@@ -1,5 +1,9 @@
-import { Task } from "./task.js"
 import type { IProcMap, PromiseFunc } from "./types.js"
+import type WorkerThreads from "worker_threads"
+
+type NodeWorker = WorkerThreads.Worker
+type NodeWorkerCtor = typeof WorkerThreads.Worker
+type NodeTransferable = WorkerThreads.TransferListItem
 
 const isNodeEnv = typeof process !== "undefined" && process.versions.node
 
@@ -9,10 +13,7 @@ export class AsyncWorker<T extends IProcMap> {
 
   constructor(procMap: T) {
     this.serializedProcMap = Object.entries(procMap).reduce(
-      (acc, [key, value]) => {
-        acc[key] = value instanceof Task ? value.serialize() : value.toString()
-        return acc
-      },
+      (acc, [key, value]) => Object.assign(acc, { [key]: value.toString() }),
       {} as Record<string, string>
     )
   }
@@ -54,16 +55,10 @@ export class AsyncWorker<T extends IProcMap> {
   }
 }
 
-type NodeWorker = import("worker_threads").Worker
-type SomeWorker = NodeWorker | Worker
-
 class OmniWorker {
-  private worker: SomeWorker | undefined = undefined
+  private worker: (Worker | NodeWorker) | undefined = undefined
 
-  constructor(
-    ctor: typeof Worker | typeof import("worker_threads").Worker,
-    workerData: any
-  ) {
+  constructor(ctor: typeof Worker | NodeWorkerCtor, workerData: any) {
     this.worker = new ctor(
       new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url),
       { workerData }
@@ -92,16 +87,13 @@ class OmniWorker {
 
   postMessage(
     message: any,
-    transfer?:
-      | Transferable[]
-      | import("worker_threads").TransferListItem[]
-      | undefined
+    transfer?: Transferable[] | NodeTransferable[] | undefined
   ): void {
     if (!this.worker) return
     if (isNodeEnv) {
       ;(this.worker as NodeWorker).postMessage(
         message,
-        transfer as import("worker_threads").TransferListItem[]
+        transfer as NodeTransferable[]
       )
       return
     }

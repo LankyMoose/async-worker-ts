@@ -5,10 +5,10 @@ export class Task {
         this.fn = fn;
         this.args = args;
     }
-    serialize() {
-        return this.fn.toString();
-    }
     getArgs() {
         return this.args;
+    }
+    toString() {
+        return this.fn.toString();
     }
 }

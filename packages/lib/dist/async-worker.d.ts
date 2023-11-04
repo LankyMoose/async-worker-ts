@@ -1,4 +1,8 @@
+/// <reference types="node" />
 import type { IProcMap, PromiseFunc } from "./types.js";
+import type WorkerThreads from "worker_threads";
+type NodeWorkerCtor = typeof WorkerThreads.Worker;
+type NodeTransferable = WorkerThreads.TransferListItem;
 export declare class AsyncWorker<T extends IProcMap> {
     private serializedProcMap;
     private worker;
@@ -9,9 +13,9 @@ export declare class AsyncWorker<T extends IProcMap> {
 }
 declare class OmniWorker {
     private worker;
-    constructor(ctor: typeof Worker | typeof import("worker_threads").Worker, workerData: any);
+    constructor(ctor: typeof Worker | NodeWorkerCtor, workerData: any);
     static new(workerData: any): Promise<OmniWorker>;
-    postMessage(message: any, transfer?: Transferable[] | import("worker_threads").TransferListItem[] | undefined): void;
+    postMessage(message: any, transfer?: Transferable[] | NodeTransferable[] | undefined): void;
     terminate(): Promise<void>;
     addEventListener<K extends keyof WorkerEventMap>(event: K, listener: (ev: WorkerEventMap[K]) => any): void;
     removeEventListener<K extends keyof WorkerEventMap>(event: K, listener: (ev: WorkerEventMap[K]) => any): void;

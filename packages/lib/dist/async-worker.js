@@ -1,13 +1,9 @@
-import { Task } from "./task.js";
 const isNodeEnv = typeof process !== "undefined" && process.versions.node;
 export class AsyncWorker {
     serializedProcMap;
     worker = undefined;
     constructor(procMap) {
-        this.serializedProcMap = Object.entries(procMap).reduce((acc, [key, value]) => {
-            acc[key] = value instanceof Task ? value.serialize() : value.toString();
-            return acc;
-        }, {});
+        this.serializedProcMap = Object.entries(procMap).reduce((acc, [key, value]) => Object.assign(acc, { [key]: value.toString() }), {});
     }
     async exit() {
         if (this.worker)
