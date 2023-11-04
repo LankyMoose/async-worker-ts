@@ -7,7 +7,8 @@ type SomeWorker = NodeWorker | Worker
 export class AsyncWorker<T extends IProcMap> {
   private serializedProcMap: Record<string, string>
   private worker: SomeWorker | undefined = undefined
-  private isNode = typeof window === "undefined"
+  private isNode = typeof process !== "undefined" && process?.versions?.node
+
   initialization: Promise<this> | undefined = undefined
 
   constructor(procMap: T) {
