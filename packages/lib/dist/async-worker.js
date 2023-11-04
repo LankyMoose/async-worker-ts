@@ -1,30 +1,10 @@
 import { Task } from "./task.js";
 export class AsyncWorker {
+    serializedProcMap;
+    worker = undefined;
+    isNode = typeof process !== "undefined" && process?.versions?.node;
+    initialization = undefined;
     constructor(procMap) {
-        Object.defineProperty(this, "serializedProcMap", {
-            enumerable: true,
-            configurable: true,
-            writable: true,
-            value: void 0
-        });
-        Object.defineProperty(this, "worker", {
-            enumerable: true,
-            configurable: true,
-            writable: true,
-            value: undefined
-        });
-        Object.defineProperty(this, "isNode", {
-            enumerable: true,
-            configurable: true,
-            writable: true,
-            value: typeof window === "undefined"
-        });
-        Object.defineProperty(this, "initialization", {
-            enumerable: true,
-            configurable: true,
-            writable: true,
-            value: undefined
-        });
         this.serializedProcMap = serializeProcMap(procMap);
         this.init();
     }
