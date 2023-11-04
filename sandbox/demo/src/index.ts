@@ -1,15 +1,13 @@
 import useWorker, { task } from "async-worker-ts"
 
-const args = [1, 2] as [number, number]
+let num = 0
 
 const worker = useWorker({
   add: async (a: number, b: number) => a + b,
-  getUser: async (userId: number) => {
-    const response = await fetch(
-      `https://jsonplaceholder.typicode.com/users/${userId}`
-    )
-    return response.json()
-  },
+  add2: task(
+    (a, b) => a + b,
+    () => [num, 0]
+  ),
   calculatePi: async () => {
     let pi = 0
     for (let i = 0; i < 1000000000; i++) {
@@ -17,13 +15,25 @@ const worker = useWorker({
     }
     return pi * 4
   },
-  addTask: task((a: number, b: number) => a + b, args),
 })
 
-setInterval(() => {
-  args[0]++
-  worker.addTask().then(console.log)
-}, 1000)
+function main() {
+  worker.add2().then((res) => {
+    console.log("add2", res)
+    if (res < 10) {
+      num++
+      sleep(250).then(main)
+    } else {
+      worker.exit()
+    }
+  })
+}
+
+async function sleep(ms: number) {
+  return new Promise((res) => setTimeout(res, ms))
+}
+
+main()
 
 // await Promise.all([
 //   //worker.add(1, 2).then(console.log),

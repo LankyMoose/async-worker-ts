@@ -7,7 +7,7 @@ export default function useWorker(procMap) {
             return acc;
         if (procMap[key] instanceof Task) {
             return Object.assign(acc, {
-                [key]: async () => worker.call(key, ...procMap[key].args),
+                [key]: async () => worker.call(key, ...procMap[key].getArgs()),
             });
         }
         return Object.assign(acc, {
@@ -16,5 +16,7 @@ export default function useWorker(procMap) {
     }, { exit: () => worker.deInit() });
 }
 export function task(fn, args) {
-    return new Task(fn, args);
+    return Object.assign(new Task(fn, []), {
+        getArgs: () => (typeof args === "function" ? args() : args),
+    });
 }

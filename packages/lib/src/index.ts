@@ -12,7 +12,7 @@ export default function useWorker<const T extends IProcMap>(procMap: T) {
           [key]: async () =>
             worker.call(
               key,
-              ...(procMap[key] as Task<any[], any[], any[]>).args
+              ...(procMap[key] as Task<any[], any[], any>).getArgs()
             ),
         })
       }
@@ -26,7 +26,9 @@ export default function useWorker<const T extends IProcMap>(procMap: T) {
 
 export function task<const T extends readonly unknown[], U extends T, V>(
   fn: (...args: T) => V,
-  args: T
+  args: T | (() => readonly [...T])
 ): Task<T, U, V> {
-  return new Task<T, U, V>(fn, args)
+  return Object.assign(new Task<T, U, V>(fn, [] as unknown as T), {
+    getArgs: () => (typeof args === "function" ? args() : args) as T,
+  })
 }

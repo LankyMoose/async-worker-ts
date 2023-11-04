@@ -16,4 +16,7 @@ export class Task {
     serialize() {
         return this.fn.toString();
     }
+    getArgs() {
+        return this.args;
+    }
 }

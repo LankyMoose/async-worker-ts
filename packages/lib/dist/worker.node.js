@@ -13,7 +13,6 @@ if (!isMainThread && parentPort) {
     });
 }
 function deserializeProcMap(procMap) {
-    //console.log("deserializeProcMap", procMap)
     return Object.entries(procMap).reduce((acc, [key, value]) => {
         acc[key] = eval(`(${value})`);
         return acc;
