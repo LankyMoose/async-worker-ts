@@ -11,11 +11,11 @@ const worker = useWorker({
     return pi * 4
   },
   loadUser: task(
-    async (id) => {
+    async (id, _s) => {
       const user = await fetch(`https://dummyjson.com/users/${id}`)
       return user.json()
     },
-    () => [userId]
+    () => [userId, "Asd"]
   ),
 })
 

@@ -26,7 +26,7 @@ export default function useWorker<const T extends IProcMap>(procMap: T) {
 
 export function task<const T extends readonly unknown[], U extends T, V>(
   fn: (...args: U) => V,
-  args: T | (() => readonly [...T])
+  args: T | (() => T)
 ): Task<T, U, V> {
   return Object.assign(new Task<T, U, V>(fn, [] as unknown as T), {
     getArgs: typeof args === "function" ? args : () => args as T,
