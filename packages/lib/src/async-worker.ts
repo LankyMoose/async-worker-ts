@@ -3,6 +3,7 @@ import type WorkerThreads from "worker_threads"
 
 type NodeWorker = WorkerThreads.Worker
 type NodeWorkerCtor = typeof WorkerThreads.Worker
+type WorkerCtor = typeof Worker
 type NodeTransferable = WorkerThreads.TransferListItem
 
 const isNodeEnv = typeof process !== "undefined" && process.versions.node
@@ -58,7 +59,7 @@ export class AsyncWorker<T extends IProcMap> {
 class OmniWorker {
   private worker: (Worker | NodeWorker) | undefined = undefined
 
-  constructor(ctor: typeof Worker | NodeWorkerCtor, workerData: any) {
+  constructor(ctor: WorkerCtor | NodeWorkerCtor, workerData: any) {
     this.worker = new ctor(
       new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url),
       { workerData }
