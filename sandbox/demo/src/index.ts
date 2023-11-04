@@ -1,27 +1,29 @@
 import useWorker, { task } from "async-worker-ts"
 
-let num = 0
+let userId: number = 1
 
 const worker = useWorker({
-  add: async (a: number, b: number) => a + b,
-  add2: task(
-    (a, b) => a + b,
-    () => [num, 0]
-  ),
-  calculatePi: async () => {
+  calculatePi: () => {
     let pi = 0
     for (let i = 0; i < 1000000000; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
     }
     return pi * 4
   },
+  loadUser: task(
+    async (id) => {
+      const user = await fetch(`https://dummyjson.com/users/${id}`)
+      return user.json()
+    },
+    () => [userId]
+  ),
 })
 
 function main() {
-  worker.add2().then((res) => {
-    console.log("add2", res)
-    if (res < 10) {
-      num++
+  worker.loadUser().then((res) => {
+    console.log("loadUser", res)
+    if (userId < 3) {
+      userId++
       sleep(250).then(main)
     } else {
       worker.exit()

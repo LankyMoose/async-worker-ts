@@ -30,5 +30,5 @@ export function task<const T extends readonly unknown[], U extends T, V>(
 ): Task<T, U, V> {
   return Object.assign(new Task<T, U, V>(fn, [] as unknown as T), {
     getArgs: () => (typeof args === "function" ? args() : args) as T,
-  })
+  }) as Task<T, U, V>
 }
