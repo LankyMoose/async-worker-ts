@@ -23,6 +23,7 @@ const worker = useWorker({
 
     do {
       pi += Math.pow(-1, i) / (2 * i + 1)
+      i++
     } while (i < iterations)
 
     return pi * 4
