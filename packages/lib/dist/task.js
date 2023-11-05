@@ -1,13 +1,10 @@
 export class Task {
     fn;
-    args;
-    constructor(fn, args) {
+    constructor(fn, getArgs) {
         this.fn = fn;
-        this.args = args;
+        this.getArgs = typeof getArgs === "function" ? getArgs : () => getArgs;
     }
-    getArgs() {
-        return this.args;
-    }
+    getArgs;
     toString() {
         return this.fn.toString();
     }
