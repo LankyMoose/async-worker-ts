@@ -1,6 +1,6 @@
 import { AsyncWorker } from "./async-worker.js";
 import { Task } from "./task.js";
-export default function useWorker(procMap) {
+export default function (procMap) {
     return createClient(procMap);
 }
 export function task(fn, args) {

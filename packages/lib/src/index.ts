@@ -2,7 +2,7 @@ import { AsyncWorker } from "./async-worker.js"
 import { Task } from "./task.js"
 import { IProcMap, AsyncWorkerClient } from "./types.js"
 
-export default function useWorker<const T extends IProcMap>(procMap: T) {
+export default function <const T extends IProcMap>(procMap: T) {
   return createClient<T>(procMap)
 }
 
