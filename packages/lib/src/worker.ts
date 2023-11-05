@@ -1,6 +1,8 @@
+import type { IProcMap, ISerializedProcMap } from "./types"
+
 let didInit = false
 
-let procMap: Record<string, (...args: any[]) => Promise<any>> = {}
+let procMap: IProcMap = {}
 
 onmessage = async (e) => {
   if (!e.data) return
@@ -11,19 +13,34 @@ onmessage = async (e) => {
     return
   }
 
-  const { id, key, args } = e.data
+  const { id, path, args } = e.data
 
   try {
-    const result = await procMap[key](...args)
+    const result = await getProc(path)(...args)
     postMessage({ id, result })
   } catch (error) {
     postMessage({ id, error })
   }
 }
 
-function deserializeProcMap(procMap: Record<string, string>) {
+function getProc(path: string) {
+  const keys = path.split(".") as string[]
+  let map = procMap as any
+
+  while (keys.length) {
+    const k = keys.shift()!
+    if (!map[k]) throw new Error(`No procedure found: "${path}"`)
+    map = map[k]
+    if (typeof map === "function") return map as { (...args: any): any }
+  }
+
+  throw new Error(`No procedure found: "${path}"`)
+}
+
+function deserializeProcMap(procMap: ISerializedProcMap) {
   return Object.entries(procMap).reduce((acc, [key, value]) => {
-    acc[key] = eval(`(${value})`)
+    acc[key] =
+      typeof value === "string" ? eval(value) : deserializeProcMap(value)
     return acc
-  }, {} as Record<string, (...args: any[]) => Promise<any>>)
+  }, {} as IProcMap)
 }

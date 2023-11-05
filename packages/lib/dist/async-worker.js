@@ -1,22 +1,24 @@
+import { Task } from "./task.js";
 const isNodeEnv = typeof process !== "undefined" && process.versions.node;
+function serializeProcMap(map) {
+    return Object.entries(map).reduce((acc, [key, value]) => Object.assign(acc, {
+        [key]: typeof value === "function" || value instanceof Task
+            ? value.toString()
+            : serializeProcMap(value),
+    }), {});
+}
 export class AsyncWorker {
     serializedProcMap;
     worker = undefined;
     constructor(procMap) {
-        this.serializedProcMap = Object.entries(procMap).reduce((acc, [key, value]) => Object.assign(acc, { [key]: value.toString() }), {});
+        this.serializedProcMap = serializeProcMap(procMap);
     }
     async exit() {
         if (this.worker)
-            await this.worker?.terminate();
+            await this.worker.terminate();
         this.worker = undefined;
     }
-    async getWorker() {
-        if (!this.worker) {
-            this.worker = await OmniWorker.new(this.serializedProcMap);
-        }
-        return this.worker;
-    }
-    call(key, ...args) {
+    call(path, ...args) {
         return new Promise(async (resolve, reject) => {
             const w = await this.getWorker();
             const id = Math.random().toString(36).slice(2);
@@ -33,8 +35,14 @@ export class AsyncWorker {
                 }
             };
             w.addEventListener("message", handler);
-            w.postMessage({ id, key, args });
+            w.postMessage({ id, path, args });
         });
+    }
+    async getWorker() {
+        if (!this.worker) {
+            this.worker = await OmniWorker.new(this.serializedProcMap);
+        }
+        return this.worker;
     }
 }
 class OmniWorker {

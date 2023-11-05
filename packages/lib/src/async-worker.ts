@@ -1,4 +1,5 @@
-import type { IProcMap, PromiseFunc } from "./types.js"
+import { Task } from "./task.js"
+import type { IProcMap, ISerializedProcMap, PromiseFunc } from "./types.js"
 import type WorkerThreads from "worker_threads"
 
 type NodeWorker = WorkerThreads.Worker
@@ -8,31 +9,34 @@ type NodeTransferable = WorkerThreads.TransferListItem
 
 const isNodeEnv = typeof process !== "undefined" && process.versions.node
 
-export class AsyncWorker<T extends IProcMap> {
-  private serializedProcMap: Record<string, string>
+function serializeProcMap(map: IProcMap): ISerializedProcMap {
+  return Object.entries(map).reduce(
+    (acc, [key, value]) =>
+      Object.assign(acc, {
+        [key]:
+          typeof value === "function" || value instanceof Task
+            ? value.toString()
+            : serializeProcMap(value),
+      }),
+    {} as Record<string, string>
+  )
+}
+
+export class AsyncWorker {
+  private serializedProcMap: ISerializedProcMap
   private worker: OmniWorker | undefined = undefined
 
-  constructor(procMap: T) {
-    this.serializedProcMap = Object.entries(procMap).reduce(
-      (acc, [key, value]) => Object.assign(acc, { [key]: value.toString() }),
-      {} as Record<string, string>
-    )
+  constructor(procMap: IProcMap) {
+    this.serializedProcMap = serializeProcMap(procMap)
   }
 
-  async exit(): Promise<void> {
-    if (this.worker) await this.worker?.terminate()
+  public async exit(): Promise<void> {
+    if (this.worker) await this.worker.terminate()
     this.worker = undefined
   }
 
-  async getWorker(): Promise<OmniWorker> {
-    if (!this.worker) {
-      this.worker = await OmniWorker.new(this.serializedProcMap)
-    }
-    return this.worker
-  }
-
-  call<K extends keyof T, U extends PromiseFunc>(
-    key: K,
+  public call<U extends PromiseFunc>(
+    path: string,
     ...args: Parameters<U>
   ): Promise<ReturnType<U>> {
     return new Promise(async (resolve, reject) => {
@@ -51,8 +55,15 @@ export class AsyncWorker<T extends IProcMap> {
         }
       }
       w.addEventListener("message", handler)
-      w.postMessage({ id, key, args })
+      w.postMessage({ id, path, args })
     })
+  }
+
+  private async getWorker(): Promise<OmniWorker> {
+    if (!this.worker) {
+      this.worker = await OmniWorker.new(this.serializedProcMap)
+    }
+    return this.worker
   }
 }
 
@@ -86,7 +97,7 @@ class OmniWorker {
     })
   }
 
-  postMessage(
+  public postMessage(
     message: any,
     transfer?: Transferable[] | NodeTransferable[] | undefined
   ): void {
@@ -101,14 +112,14 @@ class OmniWorker {
     ;(this.worker as Worker).postMessage(message, transfer as Transferable[])
   }
 
-  async terminate(): Promise<void> {
+  public async terminate(): Promise<void> {
     if (!this.worker) return
     if (isNodeEnv) (this.worker as NodeWorker).unref()
     await this.worker.terminate()
     this.worker = undefined
   }
 
-  addEventListener<K extends keyof WorkerEventMap>(
+  public addEventListener<K extends keyof WorkerEventMap>(
     event: K,
     listener: (ev: WorkerEventMap[K]) => any
   ): void {
@@ -120,7 +131,7 @@ class OmniWorker {
     ;(this.worker as Worker).addEventListener(event, listener)
   }
 
-  removeEventListener<K extends keyof WorkerEventMap>(
+  public removeEventListener<K extends keyof WorkerEventMap>(
     event: K,
     listener: (ev: WorkerEventMap[K]) => any
   ): void {

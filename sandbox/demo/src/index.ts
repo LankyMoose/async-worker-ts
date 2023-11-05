@@ -1,8 +1,12 @@
-import useWorker, { task } from "async-worker-ts"
+import createWorker, { task } from "async-worker-ts"
 
 const ctx = { id: 1 }
 
-const worker = useWorker({
+const worker = createWorker({
+  test: {
+    add: (a: number, b: number) => a + b,
+    subtract: (a: number, b: number) => a - b,
+  },
   calculatePi: () => {
     let pi = 0
     for (let i = 0; i < 100_000_000; i++) {
@@ -19,20 +23,12 @@ const worker = useWorker({
   ),
 })
 
-function main() {
-  worker.loadUser().then((res) => {
+async function main() {
+  worker.test.subtract(1, 2).then(console.log)
+  await worker.loadUser().then((res) => {
     console.log("loadUser", res)
-    if (ctx.id < 3) {
-      ctx.id++
-      sleep(250).then(main)
-    } else {
-      worker.exit()
-    }
+    worker.exit()
   })
-}
-
-async function sleep(ms: number) {
-  return new Promise((res) => setTimeout(res, ms))
 }
 
 main()

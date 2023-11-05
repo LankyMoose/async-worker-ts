@@ -1,24 +1,9 @@
-/// <reference types="node" />
 import type { IProcMap, PromiseFunc } from "./types.js";
-import type WorkerThreads from "worker_threads";
-type NodeWorkerCtor = typeof WorkerThreads.Worker;
-type WorkerCtor = typeof Worker;
-type NodeTransferable = WorkerThreads.TransferListItem;
-export declare class AsyncWorker<T extends IProcMap> {
+export declare class AsyncWorker {
     private serializedProcMap;
     private worker;
-    constructor(procMap: T);
+    constructor(procMap: IProcMap);
     exit(): Promise<void>;
-    getWorker(): Promise<OmniWorker>;
-    call<K extends keyof T, U extends PromiseFunc>(key: K, ...args: Parameters<U>): Promise<ReturnType<U>>;
+    call<U extends PromiseFunc>(path: string, ...args: Parameters<U>): Promise<ReturnType<U>>;
+    private getWorker;
 }
-declare class OmniWorker {
-    private worker;
-    constructor(ctor: WorkerCtor | NodeWorkerCtor, workerData: any);
-    static new(workerData: any): Promise<OmniWorker>;
-    postMessage(message: any, transfer?: Transferable[] | NodeTransferable[] | undefined): void;
-    terminate(): Promise<void>;
-    addEventListener<K extends keyof WorkerEventMap>(event: K, listener: (ev: WorkerEventMap[K]) => any): void;
-    removeEventListener<K extends keyof WorkerEventMap>(event: K, listener: (ev: WorkerEventMap[K]) => any): void;
-}
-export {};
