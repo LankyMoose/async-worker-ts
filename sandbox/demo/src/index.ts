@@ -1,29 +1,29 @@
 import useWorker, { task } from "async-worker-ts"
 
-let userId: number = 1
+const ctx = { id: 1 }
 
 const worker = useWorker({
   calculatePi: () => {
     let pi = 0
-    for (let i = 0; i < 1000000000; i++) {
+    for (let i = 0; i < 100_000_000; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
     }
     return pi * 4
   },
   loadUser: task(
-    async (id, _s) => {
+    async ({ id }) => {
       const user = await fetch(`https://dummyjson.com/users/${id}`)
       return user.json()
     },
-    () => [userId, "Asd"]
+    [ctx]
   ),
 })
 
 function main() {
   worker.loadUser().then((res) => {
     console.log("loadUser", res)
-    if (userId < 3) {
-      userId++
+    if (ctx.id < 3) {
+      ctx.id++
       sleep(250).then(main)
     } else {
       worker.exit()
