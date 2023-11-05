@@ -20,7 +20,7 @@ export default function useWorker<const T extends IProcMap>(procMap: T) {
         [key]: async (...args: any[]) => worker.call(key, ...args),
       })
     },
-    { exit: () => worker.exit() } as AsyncWorkerClient<T>
+    { exit: () => worker.exit() }
   ) as AsyncWorkerClient<T>
 }
 
