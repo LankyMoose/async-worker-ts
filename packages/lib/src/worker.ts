@@ -16,9 +16,9 @@ onmessage = async (e) => {
 
   try {
     // @ts-expect-error
-    reportProgress = (progress: number) => {
+    globalThis.reportProgress = (progress: number) =>
       postMessage({ id, progress })
-    }
+
     const result = await getProc(path)(...args)
     postMessage({ id, result })
   } catch (error) {
