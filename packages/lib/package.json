@@ -1,6 +1,6 @@
 {
   "name": "async-worker-ts",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A package designed to simplify the usage of Worker threads in Node and the browser",
   "main": "dist/index.js",
   "type": "module",
