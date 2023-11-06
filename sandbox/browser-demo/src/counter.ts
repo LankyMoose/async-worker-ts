@@ -10,29 +10,16 @@ const worker = useWorker({
     }
     return pi * 4
   },
-  gooseChase: async (iterations: number) => {
-    const startTime = Date.now()
-    let i = 0
-    while (i < iterations) {
-      i++
-      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
-    }
-
-    return Date.now() - startTime
-  },
 })
 
 async function main() {
-  //await worker.commands.init()
-  await worker
+  console.log("starting task")
+  worker
     .calculatePi(100_000_000)
-    .onProgress((n) => {
-      console.log("progress", n)
-    })
+    .onProgress((n) => console.log("progress", n))
     .then((res) => {
       console.log("task complete", res)
     })
-  await worker.exit()
 }
 
 export function setupCounter(element: HTMLButtonElement) {

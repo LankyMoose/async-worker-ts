@@ -1,4 +1,4 @@
-import createWorker, { task, reportProgress } from "async-worker-ts"
+import createWorker, { reportProgress } from "async-worker-ts"
 
 const worker = createWorker({
   calculatePi: (iterations: number) => {
@@ -10,28 +10,16 @@ const worker = createWorker({
     }
     return pi * 4
   },
-  gooseChase: async (iterations: number) => {
-    let i = 0
-    let startTime = Date.now()
-    while (i < iterations) {
-      i++
-      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
-    }
-
-    return Date.now() - startTime
-  },
 })
 
 async function main() {
   worker
     .calculatePi(100_000_000)
-    .onProgress((n) => {
-      console.log("progress", n)
-    })
+    .onProgress((n) => console.log("progress", n))
     .then((res) => {
       console.log("task complete", res)
+      worker.exit()
     })
-    .then(() => worker.exit())
 
   // await worker.loadUser().then((res) => {
   //   console.log("loadUser", res)
