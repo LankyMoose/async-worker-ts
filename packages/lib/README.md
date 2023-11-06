@@ -1,21 +1,23 @@
 # **async-worker-ts** 💪
 
-#### _A completely type-safe package designed to simplify the usage of Worker threads in Node and the browser._
+#### _A type-safe package designed to simplify the usage of worker threads on the server or browser._
 
 <br />
 
 ## Usage:
 
 ```ts
-import useWorker, { task } from "async-worker-ts"
+import createWorker, { task } from "async-worker-ts"
 
 let userId: number = 1
 
-const worker = useWorker({
+// Calling createWorker() spawns a new worker thread with RPCs generated based on the provided object.
+
+const worker = createWorker({
   /**
-   * This function will be executed in a worker thread.
-   * It can be a normal function or an async function,
-   * but does not have access to the parent scope.
+   * When called, this will be executed in the worker thread and can
+   * receive values from the parent scope as arguments. It can be a
+   * normal function or an async function.
    */
   calculatePi: (iterations: number) => {
     let pi = 0
@@ -30,8 +32,8 @@ const worker = useWorker({
   },
 
   /**
-   * Using task(), you can create a 'prepared' worker function that has access
-   * to parent scope variables that you provide.
+   * Using task(), you can create a procedure that is automatically
+   * provided arguments from the parent scope.
    *
    * The first argument is the function that will be executed in the worker
    * thread, and the second argument is either:
@@ -45,7 +47,24 @@ const worker = useWorker({
     },
     () => [userId]
   ),
+
+  /**
+   * You can also nest/group procedures as deep as you want.
+   */
+  todos: {
+    get: () => {
+      // ...
+    },
+    add: () => {
+      // ...
+    },
+    delete: () => {
+      // ...
+    },
+  },
 })
+
+// Calling a procedure returns a promise that resolves to its return value.
 
 const pi = await worker.calculatePi(1_000_000_000) // pi is inferred as type number
 console.log(pi) // 3.1415926525880504

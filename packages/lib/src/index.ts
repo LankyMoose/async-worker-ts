@@ -15,34 +15,30 @@ export function task<const T extends readonly unknown[], U extends T, V>(
 
 function createClient<const T extends IProcMap>(
   map: IProcMap,
-  worker: AsyncWorker = new AsyncWorker(map),
-  path: string = ""
+  worker = new AsyncWorker(map),
+  path = ""
 ): AsyncWorkerClient<T> {
-  const joinPath = (a: string, b: string) =>
-    a === "" ? b : b === "" ? a : a + "." + b
-
   return Object.entries(map).reduce(
     (acc, [key]) => {
       if (key === "exit") return acc
+
+      const p = !path ? key : path + "." + key
+
       if (map[key] instanceof Task) {
         return Object.assign(acc, {
           [key]: async () =>
-            worker.call(
-              joinPath(path, key),
-              ...(map[key] as Task<any[], any[], any>).getArgs()
-            ),
+            worker.call(p, ...(map[key] as Task<any[], any[], any>).getArgs()),
         })
       }
 
       if (typeof map[key] === "function") {
         return Object.assign(acc, {
-          [key]: async (...args: any[]) =>
-            worker.call(joinPath(path, key), ...args),
+          [key]: async (...args: any[]) => worker.call(p, ...args),
         })
       }
 
       return Object.assign(acc, {
-        [key]: createClient(map[key] as IProcMap, worker, joinPath(path, key)),
+        [key]: createClient(map[key] as IProcMap, worker, p),
       })
     },
     { exit: () => worker.exit() } as AsyncWorkerClient<T>
