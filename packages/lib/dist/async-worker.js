@@ -3,19 +3,24 @@ import { Task } from "./task.js";
 export class AsyncWorker {
     serializedProcMap;
     worker = undefined;
+    completionCallbacks = {};
     constructor(procMap) {
         this.serializedProcMap = serializeProcMap(procMap);
     }
     call(taskId, path, ...args) {
-        const w = this.getWorker();
+        const wp = this.getWorker();
         const promise = new Promise(async (resolve, reject) => {
+            const worker = await wp;
             const handler = async (event) => {
                 const { id: responseId, result, error, progress } = event.data;
                 if (progress !== undefined)
                     return;
                 if (responseId === taskId) {
-                    ;
-                    (await w).removeEventListener("message", handler);
+                    worker.removeEventListener("message", handler);
+                    if (this.completionCallbacks[taskId]) {
+                        this.completionCallbacks[taskId]();
+                        delete this.completionCallbacks[taskId];
+                    }
                     if (error) {
                         reject(error);
                     }
@@ -24,20 +29,24 @@ export class AsyncWorker {
                     }
                 }
             };
-            (await w).addEventListener("message", handler);
-            (await w).postMessage({ id: taskId, path, args });
+            worker.addEventListener("message", handler);
+            worker.postMessage({ id: taskId, path, args });
         });
         return Object.assign(promise, {
             onProgress: async (cb) => {
-                ;
-                (await w).addEventListener("message", async (event) => {
+                const worker = await wp;
+                const progressHandler = async (event) => {
                     const { id, progress } = event.data;
                     if (progress === undefined)
                         return;
                     if (id !== taskId)
                         return;
                     cb(progress);
-                });
+                };
+                worker.addEventListener("message", progressHandler);
+                this.completionCallbacks[taskId] = () => {
+                    worker.removeEventListener("message", progressHandler);
+                };
                 return promise;
             },
         });
