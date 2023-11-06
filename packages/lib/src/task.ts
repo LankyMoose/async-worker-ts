@@ -3,8 +3,4 @@ export class Task<const T extends readonly unknown[], U extends T, V> {
     this.getArgs = typeof getArgs === "function" ? getArgs : () => getArgs
   }
   public getArgs: () => T
-
-  public toString() {
-    return this.fn.toString()
-  }
 }

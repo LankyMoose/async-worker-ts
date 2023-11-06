@@ -5,7 +5,4 @@ export class Task {
         this.getArgs = typeof getArgs === "function" ? getArgs : () => getArgs;
     }
     getArgs;
-    toString() {
-        return this.fn.toString();
-    }
 }
