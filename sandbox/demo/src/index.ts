@@ -1,12 +1,6 @@
 import createWorker, { task, reportProgress } from "async-worker-ts"
 
-const ctx = { id: 1 }
-
 const worker = createWorker({
-  test: {
-    add: (a: number, b: number) => a + b,
-    subtract: (a: number, b: number) => a - b,
-  },
   calculatePi: (iterations: number) => {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
@@ -16,13 +10,16 @@ const worker = createWorker({
     }
     return pi * 4
   },
-  loadUser: task(
-    async ({ id }) => {
-      const user = await fetch(`https://dummyjson.com/users/${id}`)
-      return user.json()
-    },
-    [ctx]
-  ),
+  gooseChase: async (iterations: number) => {
+    let i = 0
+    let startTime = Date.now()
+    while (i < iterations) {
+      i++
+      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
+    }
+
+    return Date.now() - startTime
+  },
 })
 
 async function main() {

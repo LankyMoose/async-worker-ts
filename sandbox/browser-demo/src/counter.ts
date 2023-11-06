@@ -1,30 +1,37 @@
-import useWorker, { task } from "async-worker-ts"
-
-let userId = 1
+import useWorker, { reportProgress } from "async-worker-ts"
 
 const worker = useWorker({
-  calculatePi: () => {
+  calculatePi: (iterations: number) => {
     let pi = 0
-    for (let i = 0; i < 1_000_000; i++) {
+    for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
+
+      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
     }
     return pi * 4
   },
-  loadUser: task(
-    async (id) => {
-      const user = await fetch(`https://dummyjson.com/users/${id}`)
-      return user.json()
-    },
-    () => [userId]
-  ),
+  gooseChase: async (iterations: number) => {
+    const startTime = Date.now()
+    let i = 0
+    while (i < iterations) {
+      i++
+      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
+    }
+
+    return Date.now() - startTime
+  },
 })
 
 async function main() {
   //await worker.commands.init()
-  await Promise.all([
-    worker.loadUser().then(console.log),
-    worker.calculatePi().then(console.log),
-  ])
+  await worker
+    .calculatePi(100_000_000)
+    .onProgress((n) => {
+      console.log("progress", n)
+    })
+    .then((res) => {
+      console.log("task complete", res)
+    })
   await worker.exit()
 }
 
