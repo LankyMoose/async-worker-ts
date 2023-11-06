@@ -40,7 +40,7 @@ function createClient<const T extends IProcMap>(
 
       if (typeof map[key] === "function") {
         return Object.assign(acc, {
-          [key]: async (...args: any[]) => worker.call(newId(), p, ...args),
+          [key]: (...args: any[]) => worker.call(newId(), p, ...args),
         })
       }
 

@@ -20,7 +20,7 @@ function createClient(map, worker = new AsyncWorker(map), path = "") {
         }
         if (typeof map[key] === "function") {
             return Object.assign(acc, {
-                [key]: async (...args) => worker.call(newId(), p, ...args),
+                [key]: (...args) => worker.call(newId(), p, ...args),
             });
         }
         return Object.assign(acc, {
