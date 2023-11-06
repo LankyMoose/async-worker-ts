@@ -1,24 +1,42 @@
-import './style.css'
-import typescriptLogo from './typescript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.ts'
+import "./style.css"
+import useWorker, { reportProgress } from "async-worker-ts"
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
-    <h1>Vite + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite and TypeScript logos to learn more
-    </p>
-  </div>
+const worker = useWorker({
+  calculatePi: (iterations: number) => {
+    let pi = 0
+    for (let i = 0; i < iterations; i++) {
+      pi += Math.pow(-1, i) / (2 * i + 1)
+
+      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
+    }
+    return pi * 4
+  },
+})
+
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
+    <button id="btn" type="button">New Task</button>
+    <h4 id="total-iterations">Total Iterations: 0</h4>
+    <ul style="list-style-type:none;margin:0;padding:0" id="progress-bars"></ul>
 `
+const btn = document.getElementById("btn")!
+const progressBars = document.getElementById("progress-bars")!
+const totalIterationsEl = document.getElementById("total-iterations")!
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+let totalIterations = 0
+const iterationsPerTask = 250_000_000
+
+btn.addEventListener("click", () => {
+  const progressBar = Object.assign(document.createElement("progress"), {
+    value: 0,
+    max: 1,
+  })
+  const li = document.createElement("li")
+  li.appendChild(progressBar)
+  progressBars.appendChild(li)
+
+  worker.calculatePi(iterationsPerTask).onProgress((n) => {
+    progressBar.value = n
+    totalIterations += iterationsPerTask / 100
+    totalIterationsEl.innerHTML = `Total Iterations: ${totalIterations.toLocaleString()}`
+  })
+})
