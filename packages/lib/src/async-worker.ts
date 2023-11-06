@@ -5,7 +5,7 @@ import type { IProcMap, ISerializedProcMap, ProcedurePromise } from "./types.js"
 export class AsyncWorker {
   private serializedProcMap: ISerializedProcMap
   private worker: OmniWorker | undefined = undefined
-  private completionCallbacks: { [taskId: string]: [() => void] } = {}
+  private completionCallbacks: { [taskId: string]: (() => void)[] } = {}
 
   constructor(procMap: IProcMap) {
     this.serializedProcMap = serializeProcMap(procMap)
@@ -49,6 +49,9 @@ export class AsyncWorker {
 
         const worker = await wp
         worker.addEventListener("message", progressHandler)
+        if (!this.completionCallbacks[taskId])
+          this.completionCallbacks[taskId] = []
+
         this.completionCallbacks[taskId].push(() =>
           worker.removeEventListener("message", progressHandler)
         )

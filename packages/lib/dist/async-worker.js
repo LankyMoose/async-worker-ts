@@ -39,6 +39,8 @@ export class AsyncWorker {
                 };
                 const worker = await wp;
                 worker.addEventListener("message", progressHandler);
+                if (!this.completionCallbacks[taskId])
+                    this.completionCallbacks[taskId] = [];
                 this.completionCallbacks[taskId].push(() => worker.removeEventListener("message", progressHandler));
                 return promise;
             },
