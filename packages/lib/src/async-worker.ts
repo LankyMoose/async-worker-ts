@@ -18,7 +18,7 @@ function serializeProcMap(map: IProcMap): ISerializedProcMap {
             ? value.toString()
             : serializeProcMap(value),
       }),
-    {} as Record<string, string>
+    {}
   )
 }
 
@@ -28,11 +28,6 @@ export class AsyncWorker {
 
   constructor(procMap: IProcMap) {
     this.serializedProcMap = serializeProcMap(procMap)
-  }
-
-  public async exit(): Promise<void> {
-    if (this.worker) await this.worker.terminate()
-    this.worker = undefined
   }
 
   public call<U extends PromiseFunc>(
@@ -65,6 +60,11 @@ export class AsyncWorker {
     }
     return this.worker
   }
+
+  public async exit(): Promise<void> {
+    if (this.worker) await this.worker.terminate()
+    this.worker = undefined
+  }
 }
 
 class OmniWorker {
@@ -75,26 +75,6 @@ class OmniWorker {
       new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url),
       { workerData }
     )
-  }
-
-  static async new(workerData: any): Promise<OmniWorker> {
-    return new Promise(async (resolve) => {
-      const worker = new OmniWorker(
-        isNodeEnv ? (await import("worker_threads")).Worker : Worker,
-        workerData
-      )
-
-      if (isNodeEnv) return resolve(worker)
-
-      const connectHandler = async (e: MessageEvent) => {
-        if (e.data === "initialized") {
-          worker.removeEventListener("message", connectHandler)
-          resolve(worker)
-        }
-      }
-      worker.addEventListener("message", connectHandler)
-      worker.postMessage(workerData)
-    })
   }
 
   public postMessage(
@@ -110,13 +90,6 @@ class OmniWorker {
       return
     }
     ;(this.worker as Worker).postMessage(message, transfer as Transferable[])
-  }
-
-  public async terminate(): Promise<void> {
-    if (!this.worker) return
-    if (isNodeEnv) (this.worker as NodeWorker).unref()
-    await this.worker.terminate()
-    this.worker = undefined
   }
 
   public addEventListener<K extends keyof WorkerEventMap>(
@@ -141,5 +114,32 @@ class OmniWorker {
       return
     }
     ;(this.worker as Worker).removeEventListener(event, listener)
+  }
+
+  static async new(workerData: any): Promise<OmniWorker> {
+    return new Promise(async (resolve) => {
+      const worker = new OmniWorker(
+        isNodeEnv ? (await import("worker_threads")).Worker : Worker,
+        workerData
+      )
+
+      if (isNodeEnv) return resolve(worker)
+
+      const connectHandler = async (e: MessageEvent) => {
+        if (e.data === "initialized") {
+          worker.removeEventListener("message", connectHandler)
+          resolve(worker)
+        }
+      }
+      worker.addEventListener("message", connectHandler)
+      worker.postMessage(workerData)
+    })
+  }
+
+  public async terminate(): Promise<void> {
+    if (!this.worker) return
+    if (isNodeEnv) (this.worker as NodeWorker).unref()
+    await this.worker.terminate()
+    this.worker = undefined
   }
 }
