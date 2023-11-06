@@ -1,6 +1,6 @@
 import { OmniWorker } from "./omniworker.js"
 import { Task } from "./task.js"
-import type { IProcMap, ISerializedProcMap, PromiseFunc } from "./types.js"
+import type { IProcMap, ISerializedProcMap } from "./types.js"
 
 export class AsyncWorker {
   private serializedProcMap: ISerializedProcMap
@@ -10,10 +10,7 @@ export class AsyncWorker {
     this.serializedProcMap = serializeProcMap(procMap)
   }
 
-  public call<U extends PromiseFunc>(
-    path: string,
-    ...args: Parameters<U>
-  ): Promise<ReturnType<U>> {
+  public call(path: string, ...args: unknown[]): Promise<unknown> {
     return new Promise(async (resolve, reject) => {
       const w = await this.getWorker()
       const id = Math.random().toString(36).slice(2)
