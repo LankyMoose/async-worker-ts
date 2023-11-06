@@ -6,14 +6,16 @@ export class AsyncWorker {
     constructor(procMap) {
         this.serializedProcMap = serializeProcMap(procMap);
     }
-    call(path, ...args) {
-        return new Promise(async (resolve, reject) => {
-            const w = await this.getWorker();
-            const id = Math.random().toString(36).slice(2);
+    call(taskId, path, ...args) {
+        const w = this.getWorker();
+        const promise = new Promise(async (resolve, reject) => {
             const handler = async (event) => {
-                const { id: responseId, result, error } = event.data;
-                if (responseId === id) {
-                    w.removeEventListener("message", handler);
+                const { id: responseId, result, error, progress } = event.data;
+                if (progress !== undefined)
+                    return;
+                if (responseId === taskId) {
+                    ;
+                    (await w).removeEventListener("message", handler);
                     if (error) {
                         reject(error);
                     }
@@ -22,8 +24,22 @@ export class AsyncWorker {
                     }
                 }
             };
-            w.addEventListener("message", handler);
-            w.postMessage({ id, path, args });
+            (await w).addEventListener("message", handler);
+            (await w).postMessage({ id: taskId, path, args });
+        });
+        return Object.assign(promise, {
+            onProgress: async (cb) => {
+                ;
+                (await w).addEventListener("message", async (event) => {
+                    const { id, progress } = event.data;
+                    if (progress === undefined)
+                        return;
+                    if (id !== taskId)
+                        return;
+                    cb(progress);
+                });
+                return promise;
+            },
         });
     }
     async getWorker() {

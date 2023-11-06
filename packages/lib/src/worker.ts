@@ -1,7 +1,6 @@
 import type { IProcMap, ISerializedProcMap } from "./types"
 
 let didInit = false
-
 let procMap: IProcMap = {}
 
 onmessage = async (e) => {
@@ -16,6 +15,10 @@ onmessage = async (e) => {
   const { id, path, args } = e.data
 
   try {
+    // @ts-expect-error
+    window.reportProgress = (progress: number) => {
+      postMessage({ id, progress })
+    }
     const result = await getProc(path)(...args)
     postMessage({ id, result })
   } catch (error) {

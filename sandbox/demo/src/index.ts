@@ -1,4 +1,4 @@
-import createWorker, { task } from "async-worker-ts"
+import createWorker, { task, reportProgress } from "async-worker-ts"
 
 const ctx = { id: 1 }
 
@@ -11,6 +11,10 @@ const worker = createWorker({
     let pi = 0
     for (let i = 0; i < 100_000_000; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
+
+      if (i % 100_000 === 0) {
+        reportProgress(i / 100_000_000)
+      }
     }
     return pi * 4
   },
@@ -24,14 +28,24 @@ const worker = createWorker({
 })
 
 async function main() {
-  worker.test.subtract(1, 2).then(console.log)
-  await worker.loadUser().then((res) => {
-    console.log("loadUser", res)
-    worker.exit()
-  })
+  //console.log(worker.calculatePi())
+  worker
+    .calculatePi()
+    .onProgress((n) => {
+      console.log("progress", n)
+    })
+    .then((res) => {
+      console.log("task complete", res)
+    })
+    .then(() => worker.exit())
+
+  // await worker.loadUser().then((res) => {
+  //   console.log("loadUser", res)
+  //   worker.exit()
+  // })
 }
 
-main()
+await main()
 
 // await Promise.all([
 //   //worker.add(1, 2).then(console.log),

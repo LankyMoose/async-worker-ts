@@ -1,5 +1,7 @@
 import { AsyncWorker } from "./async-worker.js";
 import { Task } from "./task.js";
+// @ts-expect-error
+export function reportProgress(percent) { }
 export default function (procMap) {
     return createClient(procMap);
 }
@@ -13,16 +15,19 @@ function createClient(map, worker = new AsyncWorker(map), path = "") {
         const p = !path ? key : path + "." + key;
         if (map[key] instanceof Task) {
             return Object.assign(acc, {
-                [key]: async () => worker.call(p, ...map[key].getArgs()),
+                [key]: () => worker.call(newId(), p, ...map[key].getArgs()),
             });
         }
         if (typeof map[key] === "function") {
             return Object.assign(acc, {
-                [key]: async (...args) => worker.call(p, ...args),
+                [key]: async (...args) => worker.call(newId(), p, ...args),
             });
         }
         return Object.assign(acc, {
             [key]: createClient(map[key], worker, p),
         });
     }, { exit: () => worker.exit() });
+}
+function newId() {
+    return Math.random().toString(36).slice(2);
 }

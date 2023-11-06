@@ -11,6 +11,10 @@ onmessage = async (e) => {
     }
     const { id, path, args } = e.data;
     try {
+        // @ts-expect-error
+        window.reportProgress = (progress) => {
+            postMessage({ id, progress });
+        };
         const result = await getProc(path)(...args);
         postMessage({ id, result });
     }

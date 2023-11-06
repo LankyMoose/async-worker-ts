@@ -1,6 +1,6 @@
 import { OmniWorker } from "./omniworker.js"
 import { Task } from "./task.js"
-import type { IProcMap, ISerializedProcMap } from "./types.js"
+import type { IProcMap, ISerializedProcMap, ProcedurePromise } from "./types.js"
 
 export class AsyncWorker {
   private serializedProcMap: ISerializedProcMap
@@ -10,15 +10,18 @@ export class AsyncWorker {
     this.serializedProcMap = serializeProcMap(procMap)
   }
 
-  public call(path: string, ...args: unknown[]): Promise<unknown> {
-    return new Promise(async (resolve, reject) => {
-      const w = await this.getWorker()
-      const id = Math.random().toString(36).slice(2)
-
+  public call(
+    taskId: string,
+    path: string,
+    ...args: unknown[]
+  ): ProcedurePromise<unknown> {
+    const w = this.getWorker()
+    const promise = new Promise(async (resolve, reject) => {
       const handler = async (event: MessageEvent) => {
-        const { id: responseId, result, error } = event.data
-        if (responseId === id) {
-          w.removeEventListener("message", handler)
+        const { id: responseId, result, error, progress } = event.data
+        if (progress !== undefined) return
+        if (responseId === taskId) {
+          ;(await w).removeEventListener("message", handler)
           if (error) {
             reject(error)
           } else {
@@ -26,8 +29,20 @@ export class AsyncWorker {
           }
         }
       }
-      w.addEventListener("message", handler)
-      w.postMessage({ id, path, args })
+      ;(await w).addEventListener("message", handler)
+      ;(await w).postMessage({ id: taskId, path, args })
+    })
+
+    return Object.assign(promise, {
+      onProgress: async (cb: (percent: number) => void) => {
+        ;(await w).addEventListener("message", async (event: MessageEvent) => {
+          const { id, progress } = event.data
+          if (progress === undefined) return
+          if (id !== taskId) return
+          cb(progress)
+        })
+        return promise
+      },
     })
   }
 

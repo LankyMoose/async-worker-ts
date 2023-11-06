@@ -2,6 +2,9 @@ import { AsyncWorker } from "./async-worker.js"
 import { Task } from "./task.js"
 import { IProcMap, AsyncWorkerClient } from "./types.js"
 
+// @ts-expect-error
+export function reportProgress(percent: number): void {}
+
 export default function <const T extends IProcMap>(procMap: T) {
   return createClient<T>(procMap)
 }
@@ -26,14 +29,18 @@ function createClient<const T extends IProcMap>(
 
       if (map[key] instanceof Task) {
         return Object.assign(acc, {
-          [key]: async () =>
-            worker.call(p, ...(map[key] as Task<any[], any[], any>).getArgs()),
+          [key]: () =>
+            worker.call(
+              newId(),
+              p,
+              ...(map[key] as Task<any[], any[], any>).getArgs()
+            ),
         })
       }
 
       if (typeof map[key] === "function") {
         return Object.assign(acc, {
-          [key]: async (...args: any[]) => worker.call(p, ...args),
+          [key]: async (...args: any[]) => worker.call(newId(), p, ...args),
         })
       }
 
@@ -43,4 +50,8 @@ function createClient<const T extends IProcMap>(
     },
     { exit: () => worker.exit() } as AsyncWorkerClient<T>
   )
+}
+
+function newId() {
+  return Math.random().toString(36).slice(2)
 }

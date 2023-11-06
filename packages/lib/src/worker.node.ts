@@ -11,6 +11,10 @@ if (!isMainThread && parentPort) {
   parentPort.on("message", async ({ id, path, args }) => {
     const pp = parentPort as MessagePort
     try {
+      // @ts-expect-error
+      globalThis.reportProgress = (progress: number) =>
+        pp.postMessage({ data: { id, progress } })
+
       const result = await getProc(path)(...args)
       pp.postMessage({ data: { id, result } })
     } catch (error) {
