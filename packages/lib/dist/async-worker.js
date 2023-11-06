@@ -12,21 +12,16 @@ export class AsyncWorker {
         const promise = new Promise(async (resolve, reject) => {
             const worker = await wp;
             const handler = async (event) => {
-                const { id: responseId, result, error, progress } = event.data;
-                if (progress !== undefined)
+                if ("progress" in event.data)
                     return;
+                const { id: responseId, result, error } = event.data;
                 if (responseId === taskId) {
                     worker.removeEventListener("message", handler);
                     if (this.completionCallbacks[taskId]) {
-                        this.completionCallbacks[taskId]();
+                        this.completionCallbacks[taskId].forEach((cb) => cb());
                         delete this.completionCallbacks[taskId];
                     }
-                    if (error) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(result);
-                    }
+                    return error ? reject(error) : resolve(result);
                 }
             };
             worker.addEventListener("message", handler);
@@ -34,19 +29,17 @@ export class AsyncWorker {
         });
         return Object.assign(promise, {
             onProgress: async (cb) => {
-                const worker = await wp;
                 const progressHandler = async (event) => {
-                    const { id, progress } = event.data;
-                    if (progress === undefined)
+                    if (!("progress" in event.data))
                         return;
+                    const { id, progress } = event.data;
                     if (id !== taskId)
                         return;
                     cb(progress);
                 };
+                const worker = await wp;
                 worker.addEventListener("message", progressHandler);
-                this.completionCallbacks[taskId] = () => {
-                    worker.removeEventListener("message", progressHandler);
-                };
+                this.completionCallbacks[taskId].push(() => worker.removeEventListener("message", progressHandler));
                 return promise;
             },
         });

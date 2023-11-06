@@ -5,7 +5,7 @@ import type { IProcMap, ISerializedProcMap, ProcedurePromise } from "./types.js"
 export class AsyncWorker {
   private serializedProcMap: ISerializedProcMap
   private worker: OmniWorker | undefined = undefined
-  private completionCallbacks: { [taskId: string]: () => void } = {}
+  private completionCallbacks: { [taskId: string]: [() => void] } = {}
 
   constructor(procMap: IProcMap) {
     this.serializedProcMap = serializeProcMap(procMap)
@@ -21,20 +21,17 @@ export class AsyncWorker {
     const promise = new Promise(async (resolve, reject) => {
       const worker = await wp
       const handler = async (event: MessageEvent) => {
-        const { id: responseId, result, error, progress } = event.data
-        if (progress !== undefined) return
+        if ("progress" in event.data) return
+
+        const { id: responseId, result, error } = event.data
         if (responseId === taskId) {
           worker.removeEventListener("message", handler)
           if (this.completionCallbacks[taskId]) {
-            this.completionCallbacks[taskId]()
+            this.completionCallbacks[taskId].forEach((cb) => cb())
             delete this.completionCallbacks[taskId]
           }
 
-          if (error) {
-            reject(error)
-          } else {
-            resolve(result)
-          }
+          return error ? reject(error) : resolve(result)
         }
       }
       worker.addEventListener("message", handler)
@@ -43,19 +40,18 @@ export class AsyncWorker {
 
     return Object.assign(promise, {
       onProgress: async (cb: (percent: number) => void) => {
-        const worker = await wp
-
         const progressHandler = async (event: MessageEvent) => {
+          if (!("progress" in event.data)) return
           const { id, progress } = event.data
-          if (progress === undefined) return
           if (id !== taskId) return
           cb(progress)
         }
 
+        const worker = await wp
         worker.addEventListener("message", progressHandler)
-        this.completionCallbacks[taskId] = () => {
+        this.completionCallbacks[taskId].push(() =>
           worker.removeEventListener("message", progressHandler)
-        }
+        )
         return promise
       },
     })
