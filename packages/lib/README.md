@@ -7,7 +7,7 @@
 ## Usage:
 
 ```ts
-import createWorker, { task } from "async-worker-ts"
+import createWorker, { task, reportProgress } from "async-worker-ts"
 
 let userId: number = 1
 
@@ -21,13 +21,15 @@ const worker = createWorker({
    */
   calculatePi: (iterations: number) => {
     let pi = 0
-    let i = 0
-
-    do {
+    for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
-      i++
-    } while (i < iterations)
 
+      /**
+       * reportProgress() is a function that sends a "progress report" message
+       * to the parent scope, which can be handled with onProgress()
+       */
+      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
+    }
     return pi * 4
   },
 
@@ -64,10 +66,15 @@ const worker = createWorker({
   },
 })
 
-// Calling a procedure returns a promise that resolves to its return value.
-
-const pi = await worker.calculatePi(1_000_000_000) // pi is inferred as type number
-console.log(pi) // 3.1415926525880504
+/**
+ * Calling a procedure returns a ProcedurePromise that resolves to its
+ * return value.
+ * While the procedure is running, it can be used to listen to progress reports.
+ */
+await worker
+  .calculatePi(1_000_000_000)
+  .onProgress(console.log) // 0, 0.01, 0.02, ..., 0.99
+  .then(console.log) // 3.14159265258979
 
 await worker.loadUser().then(console.log) // { id: 1, name: 'John Doe', ... }
 

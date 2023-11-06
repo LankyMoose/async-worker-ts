@@ -7,12 +7,12 @@ const worker = createWorker({
     add: (a: number, b: number) => a + b,
     subtract: (a: number, b: number) => a - b,
   },
-  calculatePi: () => {
+  calculatePi: (iterations: number) => {
     let pi = 0
-    for (let i = 0; i < 100_000_000; i++) {
+    for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
 
-      if (i % 100_000 === 0) reportProgress(i / 100_000_000)
+      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
     }
     return pi * 4
   },
@@ -27,7 +27,7 @@ const worker = createWorker({
 
 async function main() {
   worker
-    .calculatePi()
+    .calculatePi(100_000_000)
     .onProgress((n) => {
       console.log("progress", n)
     })
