@@ -13,7 +13,10 @@ export class OmniWorker {
   constructor(ctor: WorkerCtor | NodeWorkerCtor, workerData: any) {
     this.worker = new ctor(
       new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url),
-      { workerData }
+      {
+        workerData,
+        type: "module",
+      }
     )
   }
 

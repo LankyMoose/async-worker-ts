@@ -2,7 +2,10 @@ const isNodeEnv = typeof process !== "undefined" && process.versions.node;
 export class OmniWorker {
     worker = undefined;
     constructor(ctor, workerData) {
-        this.worker = new ctor(new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url), { workerData });
+        this.worker = new ctor(new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url), {
+            workerData,
+            type: "module",
+        });
     }
     postMessage(message, transfer) {
         if (!this.worker)
