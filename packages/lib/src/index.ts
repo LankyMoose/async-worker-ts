@@ -46,7 +46,6 @@ function createClient<const T extends IProcMap>(
     },
     {
       exit: () => worker.exit(),
-      clone: () => createClient(map),
       concurrently: async <E>(
         fn: (worker: AsyncWorkerClient<T>) => Promise<E>
       ) => {
