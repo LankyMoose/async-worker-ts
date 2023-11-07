@@ -1,11 +1,41 @@
 import { Task } from "./task"
+type SerializablePropertyKey = string | number
+type Func = (...args: any[]) => any
+type Primitive = string | number | boolean
+type BaseType<T> = [T] extends [unknown]
+  ? T extends string
+    ? string
+    : T extends number
+    ? number
+    : T extends boolean
+    ? boolean
+    : T extends Array<Primitive>
+    ? BaseType<T[number]>[]
+    : T extends Record<SerializablePropertyKey, unknown>
+    ? { [K in keyof T]: BaseType<T[K]> } & Record<
+        SerializablePropertyKey,
+        unknown
+      >
+    : T
+  : never
 
-export type Func = (...args: any[]) => any
+type Head<T extends readonly unknown[]> = T[0]
+type Tail<T extends readonly unknown[]> = T extends readonly [
+  infer _Head,
+  ...infer Rest
+]
+  ? Rest
+  : readonly []
 
-type WorkerProcedure = Func | Task<readonly unknown[], any[], any>
+export type GenericArguments<
+  T extends readonly unknown[],
+  Output extends readonly unknown[] = []
+> = T extends readonly []
+  ? Output
+  : GenericArguments<Tail<T>, [...Output, BaseType<Head<T>>]>
 
 export interface IProcMap {
-  [key: string]: WorkerProcedure | IProcMap
+  [key: string]: Func | Task<readonly unknown[], any, any> | IProcMap
 }
 
 export interface ISerializedProcMap {

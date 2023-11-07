@@ -1,6 +1,6 @@
 import { AsyncWorker } from "./async-worker.js"
 import { ITask, Task } from "./task.js"
-import { IProcMap, AsyncWorkerClient } from "./types.js"
+import { IProcMap, AsyncWorkerClient, GenericArguments } from "./types.js"
 
 // @ts-expect-error
 export function reportProgress(percent: number): void {}
@@ -10,10 +10,10 @@ export default function <const T extends IProcMap>(procMap: T) {
 }
 
 export function task<const T extends readonly unknown[], U extends T, V>(
-  fn: (...args: U) => V,
+  fn: (...args: GenericArguments<U>) => V,
   args: T | (() => T)
-): ITask<T, U, V> {
-  return new Task<T, U, V>(fn, args) as ITask<T, U, V>
+): ITask<T, GenericArguments<U>, V> {
+  return new Task(fn, args) as ITask<T, GenericArguments<U>, V>
 }
 
 function createClient<const T extends IProcMap>(
@@ -30,7 +30,7 @@ function createClient<const T extends IProcMap>(
       if (map[key] instanceof Task) {
         return Object.assign(acc, {
           [key]: () =>
-            worker.call(p, ...(map[key] as Task<any[], any[], any>).getArgs()),
+            worker.call(p, ...(map[key] as Task<any[], any, any>).getArgs()),
         })
       }
 
