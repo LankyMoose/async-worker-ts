@@ -1,4 +1,4 @@
-# **async-worker-ts** 💪
+# **async-worker-ts** 🔱
 
 #### _A type-safe package designed to simplify the usage of worker threads on the server or browser._
 
