@@ -1,5 +1,5 @@
 import { AsyncWorker } from "./async-worker.js"
-import { Task } from "./task.js"
+import { ITask, Task } from "./task.js"
 import { IProcMap, AsyncWorkerClient } from "./types.js"
 
 // @ts-expect-error
@@ -12,8 +12,8 @@ export default function <const T extends IProcMap>(procMap: T) {
 export function task<const T extends readonly unknown[], U extends T, V>(
   fn: (...args: U) => V,
   args: T | (() => T)
-): Task<T, U, V> {
-  return new Task<T, U, V>(fn, args)
+): ITask<T, U, V> {
+  return new Task<T, U, V>(fn, args) as ITask<T, U, V>
 }
 
 function createClient<const T extends IProcMap>(

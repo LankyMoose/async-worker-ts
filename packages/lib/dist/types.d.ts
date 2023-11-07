@@ -21,7 +21,7 @@ export type WorkerParentMessage = {
     path: string;
     args: unknown[];
 };
-type InferredClientProc<T> = T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends Task<any, any, infer E> ? () => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends IProcMap ? {
+type InferredClientProc<T> = T extends Task<any, any, infer E> ? () => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends IProcMap ? {
     [K in keyof T]: InferredClientProc<T[K]>;
 } : never;
 export {};
