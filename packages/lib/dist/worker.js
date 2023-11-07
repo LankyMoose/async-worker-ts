@@ -1,6 +1,5 @@
 let didInit = false;
 let procMap = {};
-const customThis = "________this________";
 onmessage = async (e) => {
     if (!e.data)
         return;
@@ -11,19 +10,17 @@ onmessage = async (e) => {
         return;
     }
     const { id, path, args } = e.data;
-    // @ts-ignore
-    globalThis[customThis] = procMap;
+    let scope = procMap;
     if (path.includes(".")) {
-        // set our custom this to the parent object based on path
         const keys = path.split(".");
         keys.pop();
         // @ts-ignore
-        globalThis[customThis] = keys.reduce((acc, key) => acc[key], procMap);
+        scope = keys.reduce((acc, key) => acc[key], procMap);
     }
     try {
         // @ts-expect-error
         globalThis.reportProgress = (progress) => postMessage({ id, progress });
-        const result = await getProc(path)(...args);
+        const result = await getProc(path).bind(scope)(...args);
         postMessage({ id, result });
     }
     catch (error) {
@@ -51,10 +48,6 @@ function deserializeProcMap(procMap) {
     }, {});
 }
 function parseFunc(str) {
-    str = str
-        .replaceAll(" this.", " " + customThis + ".")
-        .replaceAll("(this.", "(" + customThis + ".")
-        .replaceAll("[this.", "[" + customThis + ".");
     const unnamedFunc = "function (";
     const asyncUnnamedFunc = "async function (";
     if (str.substring(0, unnamedFunc.length) === unnamedFunc) {

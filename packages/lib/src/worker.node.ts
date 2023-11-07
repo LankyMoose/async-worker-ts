@@ -6,19 +6,15 @@ import {
 } from "node:worker_threads"
 import type { IProcMap, ISerializedProcMap, WorkerParentMessage } from "./types"
 
-const customThis = "________this________"
-
 if (!isMainThread && parentPort) {
   const procMap = deserializeProcMap(workerData)
   parentPort.on("message", async ({ id, path, args }: WorkerParentMessage) => {
-    // @ts-ignore
-    globalThis[customThis] = procMap
+    let scope = procMap
     if (path.includes(".")) {
-      // set our custom this to the parent object based on path
       const keys = path.split(".")
       keys.pop()
       // @ts-ignore
-      globalThis[customThis] = keys.reduce((acc, key) => acc[key], procMap)
+      scope = keys.reduce((acc, key) => acc[key], procMap)
     }
 
     const pp = parentPort as MessagePort
@@ -27,7 +23,7 @@ if (!isMainThread && parentPort) {
       globalThis.reportProgress = (progress: number) =>
         pp.postMessage({ data: { id, progress } })
 
-      const result = await getProc(path)(...args)
+      const result = await getProc(path).bind(scope)(...args)
       pp.postMessage({ data: { id, result } })
     } catch (error) {
       pp.postMessage({ data: { id, error } })
@@ -58,11 +54,6 @@ function deserializeProcMap(procMap: ISerializedProcMap) {
 }
 
 function parseFunc(str: string): (...args: any[]) => any {
-  str = str
-    .replaceAll(" this.", " " + customThis + ".")
-    .replaceAll("(this.", "(" + customThis + ".")
-    .replaceAll("[this.", "[" + customThis + ".")
-
   const unnamedFunc = "function ("
   const asyncUnnamedFunc = "async function ("
 

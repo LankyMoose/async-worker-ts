@@ -3,8 +3,6 @@ import type { IProcMap, ISerializedProcMap, WorkerParentMessage } from "./types"
 let didInit = false
 let procMap: IProcMap = {}
 
-const customThis = "________this________"
-
 onmessage = async (e) => {
   if (!e.data) return
   if (!didInit) {
@@ -16,14 +14,12 @@ onmessage = async (e) => {
 
   const { id, path, args } = e.data as WorkerParentMessage
 
-  // @ts-ignore
-  globalThis[customThis] = procMap
+  let scope = procMap
   if (path.includes(".")) {
-    // set our custom this to the parent object based on path
     const keys = path.split(".")
     keys.pop()
     // @ts-ignore
-    globalThis[customThis] = keys.reduce((acc, key) => acc[key], procMap)
+    scope = keys.reduce((acc, key) => acc[key], procMap)
   }
 
   try {
@@ -31,7 +27,7 @@ onmessage = async (e) => {
     globalThis.reportProgress = (progress: number) =>
       postMessage({ id, progress })
 
-    const result = await getProc(path)(...args)
+    const result = await getProc(path).bind(scope)(...args)
     postMessage({ id, result })
   } catch (error) {
     postMessage({ id, error })
@@ -61,11 +57,6 @@ function deserializeProcMap(procMap: ISerializedProcMap) {
 }
 
 function parseFunc(str: string): (...args: any[]) => any {
-  str = str
-    .replaceAll(" this.", " " + customThis + ".")
-    .replaceAll("(this.", "(" + customThis + ".")
-    .replaceAll("[this.", "[" + customThis + ".")
-
   const unnamedFunc = "function ("
   const asyncUnnamedFunc = "async function ("
 
