@@ -8,9 +8,10 @@ const worker = useWorker({
 
       if (i % (iterations / 100) === 0) reportProgress(i / iterations)
     }
-    return pi * 4
 
     console.log("pi time", this.math.add(420, 69))
+
+    return pi * 4
   },
   math: {
     add: (a: number, b: number) => a + b,
