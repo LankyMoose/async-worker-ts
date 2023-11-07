@@ -36,8 +36,19 @@ function getProc(path) {
 function deserializeProcMap(procMap) {
     return Object.entries(procMap).reduce((acc, [key, value]) => {
         acc[key] =
-            typeof value === "string" ? eval(value) : deserializeProcMap(value);
+            typeof value === "string" ? parseFunc(value) : deserializeProcMap(value);
         return acc;
     }, {});
+}
+function parseFunc(str) {
+    const unnamedFunc = "function (";
+    const asyncUnnamedFunc = "async function (";
+    if (str.substring(0, unnamedFunc.length) === unnamedFunc) {
+        return eval(`(${str.replace(unnamedFunc, "function thunk(")})`);
+    }
+    if (str.substring(0, asyncUnnamedFunc.length) === asyncUnnamedFunc) {
+        return eval(`(${str.replace(asyncUnnamedFunc, "async function thunk(")})`);
+    }
+    return eval(`(${str})`);
 }
 export {};

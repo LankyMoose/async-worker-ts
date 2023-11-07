@@ -40,7 +40,26 @@ if (!isMainThread && parentPort) {
 function deserializeProcMap(procMap: ISerializedProcMap) {
   return Object.entries(procMap).reduce((acc, [key, value]) => {
     acc[key] =
-      typeof value === "string" ? eval(value) : deserializeProcMap(value)
+      typeof value === "string" ? parseFunc(value) : deserializeProcMap(value)
     return acc
   }, {} as IProcMap)
+}
+
+function parseFunc(str: string): (...args: any[]) => any {
+  const unnamedFunc = "function ("
+  const asyncUnnamedFunc = "async function ("
+
+  if (str.substring(0, unnamedFunc.length) === unnamedFunc) {
+    return eval(`(${str.replace(unnamedFunc, "function thunk(")})`) as (
+      ...args: any[]
+    ) => any
+  }
+
+  if (str.substring(0, asyncUnnamedFunc.length) === asyncUnnamedFunc) {
+    return eval(
+      `(${str.replace(asyncUnnamedFunc, "async function thunk(")})`
+    ) as (...args: any[]) => any
+  }
+
+  return eval(`(${str})`) as (...args: any[]) => any
 }
