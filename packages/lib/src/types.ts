@@ -23,6 +23,12 @@ export type ProcedurePromise<T> = Promise<T> & {
   onProgress: (cb: (percent: number) => void) => ProcedurePromise<T>
 }
 
+export type WorkerParentMessage = {
+  id: string
+  path: string
+  args: unknown[]
+}
+
 type InferredClientProc<T> = T extends Func
   ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>>
   : T extends Task<any, any, infer E>

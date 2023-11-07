@@ -1,7 +1,17 @@
 import { isMainThread, workerData, parentPort, } from "node:worker_threads";
+const customThis = "________this________";
 if (!isMainThread && parentPort) {
     const procMap = deserializeProcMap(workerData);
     parentPort.on("message", async ({ id, path, args }) => {
+        // @ts-ignore
+        globalThis[customThis] = procMap;
+        if (path.includes(".")) {
+            // set our custom this to the parent object based on path
+            const keys = path.split(".");
+            keys.pop();
+            // @ts-ignore
+            globalThis[customThis] = keys.reduce((acc, key) => acc[key], procMap);
+        }
         const pp = parentPort;
         try {
             // @ts-expect-error
@@ -35,6 +45,10 @@ function deserializeProcMap(procMap) {
     }, {});
 }
 function parseFunc(str) {
+    str = str
+        .replaceAll(" this.", " " + customThis + ".")
+        .replaceAll("(this.", "(" + customThis + ".")
+        .replaceAll("[this.", "[" + customThis + ".");
     const unnamedFunc = "function (";
     const asyncUnnamedFunc = "async function (";
     if (str.substring(0, unnamedFunc.length) === unnamedFunc) {

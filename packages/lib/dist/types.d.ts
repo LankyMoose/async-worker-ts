@@ -16,6 +16,11 @@ export type AsyncWorkerClient<T extends IProcMap> = {
 export type ProcedurePromise<T> = Promise<T> & {
     onProgress: (cb: (percent: number) => void) => ProcedurePromise<T>;
 };
+export type WorkerParentMessage = {
+    id: string;
+    path: string;
+    args: unknown[];
+};
 type InferredClientProc<T> = T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends Task<any, any, infer E> ? () => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends IProcMap ? {
     [K in keyof T]: InferredClientProc<T[K]>;
 } : never;
