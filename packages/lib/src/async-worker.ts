@@ -11,11 +11,8 @@ export class AsyncWorker {
     this.serializedProcMap = serializeProcMap(procMap)
   }
 
-  public call(
-    taskId: string,
-    path: string,
-    ...args: unknown[]
-  ): ProcedurePromise<unknown> {
+  public call(path: string, ...args: unknown[]): ProcedurePromise<unknown> {
+    const taskId = Math.random().toString(36).slice(2)
     const wp = this.getWorker()
 
     const promise = new Promise(async (resolve, reject) => {
@@ -36,10 +33,10 @@ export class AsyncWorker {
       }
       worker.addEventListener("message", handler)
       worker.postMessage({ id: taskId, path, args })
-    })
+    }) as Partial<ProcedurePromise<unknown>>
 
     return Object.assign(promise, {
-      onProgress: async (cb: (percent: number) => void) => {
+      onProgress: (cb: (percent: number) => void) => {
         const progressHandler = async (event: MessageEvent) => {
           if (!("progress" in event.data)) return
           const { id, progress } = event.data
@@ -47,17 +44,18 @@ export class AsyncWorker {
           cb(progress)
         }
 
-        const worker = await wp
-        worker.addEventListener("message", progressHandler)
-        if (!this.completionCallbacks[taskId])
-          this.completionCallbacks[taskId] = []
+        wp.then((worker) => {
+          worker.addEventListener("message", progressHandler)
+          if (!this.completionCallbacks[taskId])
+            this.completionCallbacks[taskId] = []
 
-        this.completionCallbacks[taskId].push(() =>
-          worker.removeEventListener("message", progressHandler)
-        )
+          this.completionCallbacks[taskId].push(() =>
+            worker.removeEventListener("message", progressHandler)
+          )
+        })
         return promise
       },
-    })
+    }) as ProcedurePromise<unknown>
   }
 
   private async getWorker(): Promise<OmniWorker> {

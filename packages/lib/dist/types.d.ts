@@ -13,7 +13,7 @@ export type AsyncWorkerClient<T extends IProcMap> = {
     exit: () => Promise<void>;
 };
 export type ProcedurePromise<T> = Promise<T> & {
-    onProgress: (cb: (percent: number) => void) => Promise<T>;
+    onProgress: (cb: (percent: number) => void) => ProcedurePromise<T>;
 };
 type InferredClientProc<T> = T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends Task<any, any, infer E> ? () => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends IProcMap ? {
     [K in keyof T]: InferredClientProc<T[K]>;

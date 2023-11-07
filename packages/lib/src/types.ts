@@ -19,7 +19,7 @@ export type AsyncWorkerClient<T extends IProcMap> = {
 }
 
 export type ProcedurePromise<T> = Promise<T> & {
-  onProgress: (cb: (percent: number) => void) => Promise<T>
+  onProgress: (cb: (percent: number) => void) => ProcedurePromise<T>
 }
 
 type InferredClientProc<T> = T extends Func

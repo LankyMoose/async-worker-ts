@@ -15,19 +15,16 @@ function createClient(map, worker = new AsyncWorker(map), path = "") {
         const p = !path ? key : path + "." + key;
         if (map[key] instanceof Task) {
             return Object.assign(acc, {
-                [key]: () => worker.call(newId(), p, ...map[key].getArgs()),
+                [key]: () => worker.call(p, ...map[key].getArgs()),
             });
         }
         if (typeof map[key] === "function") {
             return Object.assign(acc, {
-                [key]: (...args) => worker.call(newId(), p, ...args),
+                [key]: (...args) => worker.call(p, ...args),
             });
         }
         return Object.assign(acc, {
             [key]: createClient(map[key], worker, p),
         });
     }, { exit: () => worker.exit() });
-}
-function newId() {
-    return Math.random().toString(36).slice(2);
 }

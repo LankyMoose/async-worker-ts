@@ -30,17 +30,13 @@ function createClient<const T extends IProcMap>(
       if (map[key] instanceof Task) {
         return Object.assign(acc, {
           [key]: () =>
-            worker.call(
-              newId(),
-              p,
-              ...(map[key] as Task<any[], any[], any>).getArgs()
-            ),
+            worker.call(p, ...(map[key] as Task<any[], any[], any>).getArgs()),
         })
       }
 
       if (typeof map[key] === "function") {
         return Object.assign(acc, {
-          [key]: (...args: any[]) => worker.call(newId(), p, ...args),
+          [key]: (...args: any[]) => worker.call(p, ...args),
         })
       }
 
@@ -50,8 +46,4 @@ function createClient<const T extends IProcMap>(
     },
     { exit: () => worker.exit() } as AsyncWorkerClient<T>
   )
-}
-
-function newId() {
-  return Math.random().toString(36).slice(2)
 }

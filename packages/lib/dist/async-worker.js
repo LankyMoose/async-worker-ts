@@ -7,7 +7,8 @@ export class AsyncWorker {
     constructor(procMap) {
         this.serializedProcMap = serializeProcMap(procMap);
     }
-    call(taskId, path, ...args) {
+    call(path, ...args) {
+        const taskId = Math.random().toString(36).slice(2);
         const wp = this.getWorker();
         const promise = new Promise(async (resolve, reject) => {
             const worker = await wp;
@@ -28,7 +29,7 @@ export class AsyncWorker {
             worker.postMessage({ id: taskId, path, args });
         });
         return Object.assign(promise, {
-            onProgress: async (cb) => {
+            onProgress: (cb) => {
                 const progressHandler = async (event) => {
                     if (!("progress" in event.data))
                         return;
@@ -37,11 +38,12 @@ export class AsyncWorker {
                         return;
                     cb(progress);
                 };
-                const worker = await wp;
-                worker.addEventListener("message", progressHandler);
-                if (!this.completionCallbacks[taskId])
-                    this.completionCallbacks[taskId] = [];
-                this.completionCallbacks[taskId].push(() => worker.removeEventListener("message", progressHandler));
+                wp.then((worker) => {
+                    worker.addEventListener("message", progressHandler);
+                    if (!this.completionCallbacks[taskId])
+                        this.completionCallbacks[taskId] = [];
+                    this.completionCallbacks[taskId].push(() => worker.removeEventListener("message", progressHandler));
+                });
                 return promise;
             },
         });
