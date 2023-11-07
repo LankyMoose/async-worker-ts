@@ -29,5 +29,11 @@ function createClient(map, worker = new AsyncWorker(map), path = "") {
     }, {
         exit: () => worker.exit(),
         clone: () => createClient(map),
+        concurrently: async (fn) => {
+            const w = createClient(map);
+            const res = await fn(w);
+            w.exit();
+            return res;
+        },
     });
 }
