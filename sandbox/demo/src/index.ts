@@ -1,7 +1,7 @@
-import createWorker, { reportProgress } from "async-worker-ts"
+import useWorker, { reportProgress } from "async-worker-ts"
 
-const worker = createWorker({
-  calculatePi: (iterations: number) => {
+const worker = useWorker({
+  calculatePi: function (iterations: number) {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
@@ -9,6 +9,12 @@ const worker = createWorker({
       if (i % (iterations / 100) === 0) reportProgress(i / iterations)
     }
     return pi * 4
+
+    console.log("pi time", this.math.add(420, 69))
+  },
+  math: {
+    add: (a: number, b: number) => a + b,
+    subtract: (a: number, b: number) => a - b,
   },
 })
 
@@ -20,11 +26,6 @@ async function main() {
       console.log("task complete", res)
       worker.exit()
     })
-
-  // await worker.loadUser().then((res) => {
-  //   console.log("loadUser", res)
-  //   worker.exit()
-  // })
 }
 
 await main()

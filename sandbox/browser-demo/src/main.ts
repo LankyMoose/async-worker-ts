@@ -44,16 +44,25 @@ let totalIterations = 0
 const iterationsPerTask = 250_000_000
 
 const worker = useWorker({
-  calculatePi: (iterations: number) => {
+  calculatePi: function (iterations: number) {
+    console.log("calculatePi", this)
     let pi = 0
     for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
 
       if (i % (iterations / 100) === 0) reportProgress(i / iterations)
     }
+
+    console.log("pi time", this.math.add(420, 69))
+
     return pi * 4
   },
+  math: {
+    add: (a: number, b: number) => a + b,
+    subtract: (a: number, b: number) => a - b,
+  },
 })
+
 // @ts-ignore
 function syncPie() {
   const { durationText, progressBar, cancelButton } = createTaskUI(worker)
