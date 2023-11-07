@@ -1,6 +1,6 @@
 import { AsyncWorkerClient } from "async-worker-ts/dist/types"
 import "./style.css"
-import useWorker, { reportProgress } from "async-worker-ts"
+import useWorker, { reportProgress, task } from "async-worker-ts"
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <button id="btn" type="button">New Task</button>
@@ -45,20 +45,18 @@ const iterationsPerTask = 250_000_000
 
 const worker = useWorker({
   calculatePi: function (iterations: number) {
-    console.log("calculatePi", this)
     let pi = 0
     for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
 
       if (i % (iterations / 100) === 0) reportProgress(i / iterations)
     }
-
-    console.log("pi time", this.math.add(420, 69))
+    console.log("pi time", this.math.add(21, 21))
 
     return pi * 4
   },
   math: {
-    add: (a: number, b: number) => a + b,
+    add: task((a, b) => a + b, [123 as number, 345 as number]),
     subtract: (a: number, b: number) => a - b,
   },
 })
