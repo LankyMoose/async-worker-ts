@@ -15,6 +15,7 @@ export interface ISerializedProcMap {
 export type AsyncWorkerClient<T extends IProcMap> = {
   [K in keyof T]: InferredClientProc<T[K]>
 } & {
+  clone: () => AsyncWorkerClient<T>
   exit: () => Promise<void>
 }
 

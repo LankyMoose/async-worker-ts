@@ -12,7 +12,7 @@ export class AsyncWorker {
         const wp = this.getWorker();
         const promise = new Promise(async (resolve, reject) => {
             const worker = await wp;
-            const handler = async (event) => {
+            const handler = (event) => {
                 if ("progress" in event.data)
                     return;
                 const { id: responseId, result, error } = event.data;

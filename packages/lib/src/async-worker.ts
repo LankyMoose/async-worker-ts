@@ -17,7 +17,7 @@ export class AsyncWorker {
 
     const promise = new Promise(async (resolve, reject) => {
       const worker = await wp
-      const handler = async (event: MessageEvent) => {
+      const handler = (event: MessageEvent) => {
         if ("progress" in event.data) return
 
         const { id: responseId, result, error } = event.data

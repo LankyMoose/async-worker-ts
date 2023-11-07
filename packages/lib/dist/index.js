@@ -26,5 +26,8 @@ function createClient(map, worker = new AsyncWorker(map), path = "") {
         return Object.assign(acc, {
             [key]: createClient(map[key], worker, p),
         });
-    }, { exit: () => worker.exit() });
+    }, {
+        exit: () => worker.exit(),
+        clone: () => createClient(map),
+    });
 }

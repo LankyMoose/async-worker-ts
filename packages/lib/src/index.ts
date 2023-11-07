@@ -44,6 +44,9 @@ function createClient<const T extends IProcMap>(
         [key]: createClient(map[key] as IProcMap, worker, p),
       })
     },
-    { exit: () => worker.exit() } as AsyncWorkerClient<T>
+    {
+      exit: () => worker.exit(),
+      clone: () => createClient(map),
+    } as AsyncWorkerClient<T>
   )
 }
