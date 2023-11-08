@@ -20,7 +20,19 @@ onmessage = async (e) => {
     try {
         // @ts-expect-error
         globalThis.reportProgress = (progress) => postMessage({ id, progress });
-        const result = await getProc(path).bind(scope)(...args);
+        const fn = getProc(path).bind(scope);
+        const isGenerator = fn[Symbol.toStringTag] === "AsyncGeneratorFunction";
+        if (isGenerator) {
+            const gen = fn(...args);
+            let result = await gen.next();
+            while (!result.done) {
+                postMessage({ id, progress: result.value });
+                result = await gen.next();
+            }
+            postMessage({ id, result: result.value });
+            return;
+        }
+        const result = await fn(...args);
         postMessage({ id, result });
     }
     catch (error) {
@@ -47,16 +59,35 @@ function deserializeProcMap(procMap) {
         return acc;
     }, {});
 }
+// prettier-ignore
 function parseFunc(str) {
+    const unnamedFunc = "function(";
+    const unnamedGeneratorFunc = "function*(";
+    const unnamedAsyncFunc = "async function(";
+    const unnamedAsyncGeneratorFunc = "async function*(";
+    // trim and replace to normalize whitespace
     str = str.trim();
-    if (str.startsWith("function"))
-        str = str.replace("function", "async function");
-    const fn_name_default = "___awt_thunk___";
-    if (str.startsWith("async function (")) {
-        return eval(`(${str.replace("async function (", `async function ${fn_name_default}(`)})`);
+    const fn_name_internal = "___thunk___";
+    if (str.startsWith("function ("))
+        str = str.replace("function (", unnamedFunc);
+    if (str.startsWith("async function ("))
+        str = str.replace("async function (", unnamedAsyncFunc);
+    if (str.startsWith("function *("))
+        str = str.replace("function *(", unnamedGeneratorFunc);
+    if (str.startsWith("async function *("))
+        str = str.replace("async function *(", unnamedAsyncGeneratorFunc);
+    // if it's an unnamed function, add a name so we can eval it
+    if (str.startsWith(unnamedFunc)) {
+        return eval(`(${str.replace(unnamedFunc, `function ${fn_name_internal}(`)})`);
     }
-    else if (str.startsWith("async function *(")) {
-        return eval(`(${str.replace("async function *(", `async function* ${fn_name_default}(`)})`);
+    else if (str.startsWith(unnamedAsyncFunc)) {
+        return eval(`(${str.replace(unnamedAsyncFunc, `async function ${fn_name_internal}(`)})`);
+    }
+    else if (str.startsWith(unnamedGeneratorFunc)) {
+        return eval(`(${str.replace(unnamedGeneratorFunc, `function* ${fn_name_internal}(`)})`);
+    }
+    else if (str.startsWith(unnamedAsyncGeneratorFunc)) {
+        return eval(`(${str.replace(unnamedAsyncGeneratorFunc, `async function* ${fn_name_internal}(`)})`);
     }
     return eval(`(${str})`);
 }
