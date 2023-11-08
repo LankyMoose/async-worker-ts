@@ -44,6 +44,15 @@ let totalIterations = 0
 const iterationsPerTask = 250_000_000
 
 const worker = useWorker({
+  generatorTest: function* (
+    argumentValue: number
+  ): Generator<Promise<number>, Promise<number>, number> {
+    yield this.asyncNumber(1 + argumentValue)
+    yield this.asyncNumber(2 + argumentValue)
+    return this.asyncNumber(3 + argumentValue)
+  },
+  asyncNumber: (n: number) =>
+    new Promise((res) => setTimeout(() => res(n), 450)) as Promise<number>,
   calculatePi: function (iterations: number) {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
@@ -60,6 +69,9 @@ const worker = useWorker({
     subtract: (a: number, b: number) => a - b,
   },
 })
+
+const res = worker.generatorTest(1)
+console.log(await res.onProgress(console.log))
 
 // @ts-ignore
 function syncPie() {
@@ -81,7 +93,7 @@ function syncPie() {
       cancelButton.innerText = "Remove"
     })
 }
-
+// @ts-ignore
 function concurrentPie() {
   worker.concurrently((w) => {
     const startTime = Date.now()
@@ -103,4 +115,4 @@ function concurrentPie() {
   })
 }
 
-btn.addEventListener("click", () => concurrentPie())
+btn.addEventListener("click", () => syncPie())

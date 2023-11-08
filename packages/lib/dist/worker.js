@@ -24,13 +24,13 @@ onmessage = async (e) => {
         const toStringTag = fn[Symbol.toStringTag];
         const isGenerator = toStringTag?.endsWith("GeneratorFunction");
         if (isGenerator) {
-            const gen = fn(...args);
+            const gen = await fn(...args);
             let result = await gen.next();
             while (!result.done) {
-                postMessage({ id, progress: result.value });
+                postMessage({ id, progress: await resolveGeneratorValue(result.value) });
                 result = await gen.next();
             }
-            postMessage({ id, result: result.value });
+            postMessage({ id, result: await resolveGeneratorValue(result.value) });
             return;
         }
         const result = await fn(...args);
@@ -40,6 +40,11 @@ onmessage = async (e) => {
         postMessage({ id, error });
     }
 };
+async function resolveGeneratorValue(value) {
+    if (value instanceof Promise)
+        return await value;
+    return value;
+}
 function getProc(path) {
     const keys = path.split(".");
     let map = procMap;
