@@ -1,3 +1,4 @@
+import { customGenerator, deserializeProcMap, getProc, getProcMapScope, } from "./worker-funcs.js";
 let didInit = false;
 let procMap = {};
 let generatedFnMap = {};
@@ -10,22 +11,12 @@ onmessage = async (e) => {
         postMessage("initialized");
         return;
     }
-    const { id, path, args,
-    //_result
-     } = e.data;
+    const { id, path, args } = e.data;
     if ("yield" in e.data)
         return;
     if ("result" in e.data)
         return;
-    let scope = procMap;
-    if (path === undefined)
-        debugger;
-    if (path.includes(".")) {
-        const keys = path.split(".");
-        keys.pop();
-        // @ts-ignore
-        scope = keys.reduce((acc, key) => acc[key], procMap);
-    }
+    const scope = path.includes(".") ? getProcMapScope(procMap, path) : procMap;
     try {
         // @ts-expect-error
         globalThis.reportProgress = (progress) => postMessage({ id, progress });
@@ -47,7 +38,7 @@ onmessage = async (e) => {
                 addEventListener("message", handler);
             });
         };
-        let fn = getProc(path);
+        let fn = getProc(procMap, path);
         const toStringTag = fn[Symbol.toStringTag];
         const isGenerator = toStringTag?.endsWith("GeneratorFunction");
         if (isGenerator) {
@@ -63,76 +54,3 @@ onmessage = async (e) => {
         postMessage({ id, error });
     }
 };
-function customGenerator(sourceCode) {
-    const yieldRegex = /yield\s+([^;\n]+)(?=[;\n])/g; // Regex to find 'yield' statements
-    let newSrc = nameFunc(sourceCode);
-    if (newSrc.substring(0, "async ".length) !== "async ") {
-        newSrc = `async ${newSrc}`;
-    }
-    if (newSrc.startsWith("async function*")) {
-        newSrc = newSrc.replace("async function*", "async function");
-    }
-    let match;
-    while ((match = yieldRegex.exec(newSrc)) !== null) {
-        // Extract values from the 'yield' statements
-        const offset = match.index;
-        const len = match[0].length;
-        const value = match[1];
-        newSrc =
-            newSrc.slice(0, offset) +
-                `await _____yield(${value})` +
-                newSrc.slice(offset + len, newSrc.length);
-    }
-    return newSrc;
-}
-function getProc(path) {
-    const keys = path.split(".");
-    let map = procMap;
-    while (keys.length) {
-        const k = keys.shift();
-        if (!map[k])
-            throw new Error(`No procedure found: "${path}"`);
-        map = map[k];
-        if (typeof map === "function")
-            return map;
-    }
-    throw new Error(`No procedure found: "${path}"`);
-}
-function deserializeProcMap(procMap) {
-    return Object.entries(procMap).reduce((acc, [key, value]) => {
-        acc[key] =
-            typeof value === "string" ? parseFunc(value) : deserializeProcMap(value);
-        return acc;
-    }, {});
-}
-// prettier-ignore
-function parseFunc(str) {
-    str = nameFunc(str);
-    return eval(`(${str})`);
-}
-function nameFunc(str) {
-    const unnamedFunc = "function(";
-    const unnamedGeneratorFunc = "function*(";
-    const unnamedAsyncFunc = "async function(";
-    const unnamedAsyncGeneratorFunc = "async function*(";
-    str = str.trim();
-    const fn_name_internal = "___thunk___";
-    if (str.startsWith("function ("))
-        str = str.replace("function (", unnamedFunc);
-    if (str.startsWith("async function ("))
-        str = str.replace("async function (", unnamedAsyncFunc);
-    if (str.startsWith("function* ("))
-        str = str.replace("function* (", unnamedGeneratorFunc);
-    if (str.startsWith("async function* ("))
-        str = str.replace("async function* (", unnamedAsyncGeneratorFunc);
-    if (str.startsWith(unnamedFunc))
-        return str.replace(unnamedFunc, `function ${fn_name_internal}(`);
-    if (str.startsWith(unnamedAsyncFunc))
-        return str.replace(unnamedAsyncFunc, `async function ${fn_name_internal}(`);
-    if (str.startsWith(unnamedGeneratorFunc))
-        return str.replace(unnamedGeneratorFunc, `function* ${fn_name_internal}(`);
-    if (str.startsWith(unnamedAsyncGeneratorFunc))
-        return str.replace(unnamedAsyncGeneratorFunc, `async function* ${fn_name_internal}(`);
-    return str;
-}
-export {};

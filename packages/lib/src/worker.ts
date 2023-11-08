@@ -1,4 +1,10 @@
-import type { IProcMap, ISerializedProcMap, WorkerParentMessage } from "./types"
+import type { IProcMap, WorkerParentMessage } from "./types"
+import {
+  customGenerator,
+  deserializeProcMap,
+  getProc,
+  getProcMapScope,
+} from "./worker-funcs.js"
 
 let didInit = false
 let procMap: IProcMap = {}
@@ -13,23 +19,11 @@ onmessage = async (e) => {
     return
   }
 
-  const {
-    id,
-    path,
-    args,
-    //_result
-  } = e.data as WorkerParentMessage
+  const { id, path, args } = e.data as WorkerParentMessage
   if ("yield" in e.data) return
   if ("result" in e.data) return
 
-  let scope = procMap
-  if (path === undefined) debugger
-  if (path.includes(".")) {
-    const keys = path.split(".")
-    keys.pop()
-    // @ts-ignore
-    scope = keys.reduce((acc, key) => acc[key], procMap)
-  }
+  const scope = path.includes(".") ? getProcMapScope(procMap, path) : procMap
 
   try {
     // @ts-expect-error
@@ -55,7 +49,7 @@ onmessage = async (e) => {
       })
     }
 
-    let fn = getProc(path)
+    let fn = getProc(procMap, path)
     const toStringTag = (fn as any)[Symbol.toStringTag]
     const isGenerator = toStringTag?.endsWith("GeneratorFunction")
 
@@ -73,87 +67,4 @@ onmessage = async (e) => {
   } catch (error) {
     postMessage({ id, error })
   }
-}
-
-function customGenerator(sourceCode: string) {
-  const yieldRegex = /yield\s+([^;\n]+)(?=[;\n])/g // Regex to find 'yield' statements
-  let newSrc = nameFunc(sourceCode)
-  if (newSrc.substring(0, "async ".length) !== "async ") {
-    newSrc = `async ${newSrc}`
-  }
-  if (newSrc.startsWith("async function*")) {
-    newSrc = newSrc.replace("async function*", "async function")
-  }
-  let match
-  while ((match = yieldRegex.exec(newSrc)) !== null) {
-    // Extract values from the 'yield' statements
-    const offset = match.index
-    const len = match[0].length
-    const value = match[1]
-
-    newSrc =
-      newSrc.slice(0, offset) +
-      `await _____yield(${value})` +
-      newSrc.slice(offset + len, newSrc.length)
-  }
-
-  return newSrc
-}
-
-function getProc(path: string) {
-  const keys = path.split(".") as string[]
-  let map = procMap as any
-
-  while (keys.length) {
-    const k = keys.shift()!
-    if (!map[k]) throw new Error(`No procedure found: "${path}"`)
-    map = map[k]
-    if (typeof map === "function") return map as { (...args: any): any }
-  }
-
-  throw new Error(`No procedure found: "${path}"`)
-}
-
-function deserializeProcMap(procMap: ISerializedProcMap) {
-  return Object.entries(procMap).reduce((acc, [key, value]) => {
-    acc[key] =
-      typeof value === "string" ? parseFunc(value) : deserializeProcMap(value)
-    return acc
-  }, {} as IProcMap)
-}
-// prettier-ignore
-function parseFunc(str: string): (...args: any[]) => any {
-  str = nameFunc(str)
-  return eval(`(${str})`)
-}
-
-function nameFunc(str: string) {
-  const unnamedFunc = "function("
-  const unnamedGeneratorFunc = "function*("
-  const unnamedAsyncFunc = "async function("
-  const unnamedAsyncGeneratorFunc = "async function*("
-  str = str.trim()
-
-  const fn_name_internal = "___thunk___"
-
-  if (str.startsWith("function (")) str = str.replace("function (", unnamedFunc)
-  if (str.startsWith("async function ("))
-    str = str.replace("async function (", unnamedAsyncFunc)
-  if (str.startsWith("function* ("))
-    str = str.replace("function* (", unnamedGeneratorFunc)
-  if (str.startsWith("async function* ("))
-    str = str.replace("async function* (", unnamedAsyncGeneratorFunc)
-
-  if (str.startsWith(unnamedFunc))
-    return str.replace(unnamedFunc, `function ${fn_name_internal}(`)
-  if (str.startsWith(unnamedAsyncFunc))
-    return str.replace(unnamedAsyncFunc, `async function ${fn_name_internal}(`)
-  if (str.startsWith(unnamedGeneratorFunc))
-    return str.replace(unnamedGeneratorFunc, `function* ${fn_name_internal}(`)
-  if (str.startsWith(unnamedAsyncGeneratorFunc))
-    return str.replace(
-      unnamedAsyncGeneratorFunc,
-      `async function* ${fn_name_internal}(`
-    )
-  return str
 }
