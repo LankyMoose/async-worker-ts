@@ -23,8 +23,9 @@ export type AsyncWorkerClient<T extends IProcMap> = {
     concurrently: <E>(fn: (worker: AsyncWorkerClient<T>) => E) => Promise<E>;
     exit: () => Promise<void>;
 };
-type ProcedurePromise<T> = T extends Generator<infer YieldResult, infer Return, infer Input> ? Promise<Return> & {
-    onYield: (cb: (value: YieldResult) => Input) => Promise<Return>;
+export type ProcedurePromise<T> = T extends Generator<infer YieldResult, infer Return, infer Input> ? Promise<Return> & {
+    onYield: (cb: (value: YieldResult) => Input | Promise<Input>) => Promise<Return>;
+    yield: (cb: (args: YieldResult) => Generator) => ProcedurePromise<Return>;
 } : Promise<T> & {
     onProgress: (cb: (percent: number) => void) => ProcedurePromise<T>;
 };
@@ -32,6 +33,8 @@ export type WorkerParentMessage = {
     id: string;
     path: string;
     args: unknown[];
+    yield?: unknown;
+    result?: unknown;
 };
 type InferredClientProc<T> = T extends Task<any, any, infer E> ? () => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends IProcMap ? {
     [K in keyof T]: InferredClientProc<T[K]>;

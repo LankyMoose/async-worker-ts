@@ -12,13 +12,13 @@ export class AsyncWorker {
   }
 
   public call(path: string, ...args: unknown[]): ProcedurePromise<unknown> {
-    const taskId = Math.random().toString(36).slice(2)
+    const taskId = crypto.randomUUID()
     const wp = this.getWorker()
 
     const promise = new Promise(async (resolve, reject) => {
       const worker = await wp
       const handler = (event: MessageEvent) => {
-        if ("progress" in event.data) return
+        if (!("result" in event.data)) return
 
         const { id: responseId, result, error } = event.data
         if (responseId === taskId) {
@@ -36,6 +36,56 @@ export class AsyncWorker {
     }) as Partial<ProcedurePromise<unknown>>
 
     return Object.assign(promise, {
+      yield: (genFunc: (args: any) => Generator | AsyncGenerator) => {
+        let g: Generator | AsyncGenerator
+        const yieldHandler = async (event: MessageEvent) => {
+          if (!("yield" in event.data)) return
+          const { id, yield: yieldValue } = event.data
+          if (id !== taskId) return
+
+          if (!g) g = genFunc(yieldValue)
+          const gRes = await g.next(yieldValue)
+          if (gRes.done) {
+            wp.then((worker) => worker.postMessage({ id, result: gRes.value }))
+          } else {
+            wp.then((worker) => worker.postMessage({ id, yield: gRes.value }))
+          }
+        }
+
+        wp.then((worker) => {
+          worker.addEventListener("message", yieldHandler)
+          if (!this.completionCallbacks[taskId])
+            this.completionCallbacks[taskId] = []
+
+          this.completionCallbacks[taskId].push(() =>
+            worker.removeEventListener("message", yieldHandler)
+          )
+        })
+
+        return promise
+      },
+      onYield: (cb: (value: unknown) => unknown) => {
+        const yieldHandler = async (event: MessageEvent) => {
+          if (!("yield" in event.data)) return
+          const { id, yield: yieldValue } = event.data
+          if (id !== taskId) return
+
+          const result = await cb(yieldValue)
+          wp.then((worker) => worker.postMessage({ id, yield: result }))
+        }
+
+        wp.then((worker) => {
+          worker.addEventListener("message", yieldHandler)
+          if (!this.completionCallbacks[taskId])
+            this.completionCallbacks[taskId] = []
+
+          this.completionCallbacks[taskId].push(() =>
+            worker.removeEventListener("message", yieldHandler)
+          )
+        })
+
+        return promise
+      },
       onProgress: (cb: (percent: number) => void) => {
         const progressHandler = async (event: MessageEvent) => {
           if (!("progress" in event.data)) return

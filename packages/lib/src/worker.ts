@@ -2,6 +2,7 @@ import type { IProcMap, ISerializedProcMap, WorkerParentMessage } from "./types"
 
 let didInit = false
 let procMap: IProcMap = {}
+let generatedFnMap: { [key: string]: string } = {}
 
 onmessage = async (e) => {
   if (!e.data) return
@@ -12,9 +13,17 @@ onmessage = async (e) => {
     return
   }
 
-  const { id, path, args } = e.data as WorkerParentMessage
+  const {
+    id,
+    path,
+    args,
+    //_result
+  } = e.data as WorkerParentMessage
+  if ("yield" in e.data) return
+  if ("result" in e.data) return
 
   let scope = procMap
+  if (path === undefined) debugger
   if (path.includes(".")) {
     const keys = path.split(".")
     keys.pop()
@@ -27,34 +36,68 @@ onmessage = async (e) => {
     globalThis.reportProgress = (progress: number) =>
       postMessage({ id, progress })
 
-    const fn = getProc(path).bind(scope)
+    // @ts-expect-error
+    globalThis._____yield = async (value: any) => {
+      postMessage({ id, yield: value })
+
+      return new Promise((resolve) => {
+        const handler = async (event: MessageEvent) => {
+          if (!("yield" in event.data) && !("result" in event.data)) return
+          const { id: responseId, yield: yieldInputValue, result } = event.data
+          if (responseId !== id) return
+
+          removeEventListener("message", handler)
+          if ("result" in event.data) return resolve(result)
+          resolve(yieldInputValue)
+        }
+
+        addEventListener("message", handler)
+      })
+    }
+
+    let fn = getProc(path)
     const toStringTag = (fn as any)[Symbol.toStringTag]
     const isGenerator = toStringTag?.endsWith("GeneratorFunction")
 
     if (isGenerator) {
-      debugger
-      const gen = await fn(...args)
-      let result = await gen.next()
+      const genSrc =
+        generatedFnMap[path] ??
+        (generatedFnMap[path] = customGenerator(fn.toString()))
 
-      while (!result.done) {
-        postMessage({ id, progress: await resolveGeneratorValue(result.value) })
-        result = await gen.next()
-      }
-
-      postMessage({ id, result: await resolveGeneratorValue(result.value) })
-      return
+      let gfn = eval(`(${genSrc})`) as (...args: any[]) => any
+      fn = gfn
     }
 
-    const result = await fn(...args)
+    const result = await fn.bind(scope)(...args)
     postMessage({ id, result })
   } catch (error) {
     postMessage({ id, error })
   }
 }
 
-async function resolveGeneratorValue(value: any) {
-  if (value instanceof Promise) return await value
-  return value
+function customGenerator(sourceCode: string) {
+  const yieldRegex = /yield\s+([^;\n]+)(?=[;\n])/g // Regex to find 'yield' statements
+  let newSrc = nameFunc(sourceCode)
+  if (newSrc.substring(0, "async ".length) !== "async ") {
+    newSrc = `async ${newSrc}`
+  }
+  if (newSrc.startsWith("async function*")) {
+    newSrc = newSrc.replace("async function*", "async function")
+  }
+  let match
+  while ((match = yieldRegex.exec(newSrc)) !== null) {
+    // Extract values from the 'yield' statements
+    const offset = match.index
+    const len = match[0].length
+    const value = match[1]
+
+    newSrc =
+      newSrc.slice(0, offset) +
+      `await _____yield(${value})` +
+      newSrc.slice(offset + len, newSrc.length)
+  }
+
+  return newSrc
 }
 
 function getProc(path: string) {
@@ -80,31 +123,37 @@ function deserializeProcMap(procMap: ISerializedProcMap) {
 }
 // prettier-ignore
 function parseFunc(str: string): (...args: any[]) => any {
+  str = nameFunc(str)
+  return eval(`(${str})`)
+}
+
+function nameFunc(str: string) {
   const unnamedFunc = "function("
   const unnamedGeneratorFunc = "function*("
   const unnamedAsyncFunc = "async function("
   const unnamedAsyncGeneratorFunc = "async function*("
-
-  // trim and replace to normalize whitespace
   str = str.trim()
+
   const fn_name_internal = "___thunk___"
 
   if (str.startsWith("function (")) str = str.replace("function (", unnamedFunc)
-  if (str.startsWith("async function (")) str = str.replace("async function (", unnamedAsyncFunc)
-  if (str.startsWith("function *(")) str = str.replace("function *(", unnamedGeneratorFunc)
-  if (str.startsWith("async function *(")) str = str.replace("async function *(", unnamedAsyncGeneratorFunc)
+  if (str.startsWith("async function ("))
+    str = str.replace("async function (", unnamedAsyncFunc)
+  if (str.startsWith("function* ("))
+    str = str.replace("function* (", unnamedGeneratorFunc)
+  if (str.startsWith("async function* ("))
+    str = str.replace("async function* (", unnamedAsyncGeneratorFunc)
 
-
-  // if it's an unnamed function, add a name so we can eval it
-  if (str.startsWith(unnamedFunc)) {
-    return eval(`(${str.replace(unnamedFunc, `function ${fn_name_internal}(`)})`)
-  } else if (str.startsWith(unnamedAsyncFunc)) {
-    return eval(`(${str.replace(unnamedAsyncFunc, `async function ${fn_name_internal}(`)})`)
-  } else if (str.startsWith(unnamedGeneratorFunc)) {
-    return eval(`(${str.replace(unnamedGeneratorFunc, `function* ${fn_name_internal}(`)})`)
-  } else if (str.startsWith(unnamedAsyncGeneratorFunc)) {
-    return eval(`(${str.replace(unnamedAsyncGeneratorFunc, `async function* ${fn_name_internal}(`)})`)
-  }
-
-  return eval(`(${str})`)
+  if (str.startsWith(unnamedFunc))
+    return str.replace(unnamedFunc, `function ${fn_name_internal}(`)
+  if (str.startsWith(unnamedAsyncFunc))
+    return str.replace(unnamedAsyncFunc, `async function ${fn_name_internal}(`)
+  if (str.startsWith(unnamedGeneratorFunc))
+    return str.replace(unnamedGeneratorFunc, `function* ${fn_name_internal}(`)
+  if (str.startsWith(unnamedAsyncGeneratorFunc))
+    return str.replace(
+      unnamedAsyncGeneratorFunc,
+      `async function* ${fn_name_internal}(`
+    )
+  return str
 }
