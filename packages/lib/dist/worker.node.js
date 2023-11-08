@@ -14,7 +14,8 @@ if (!isMainThread && parentPort) {
             // @ts-expect-error
             globalThis.reportProgress = (progress) => postMessage({ id, progress });
             const fn = getProc(path).bind(scope);
-            const isGenerator = fn[Symbol.toStringTag].endsWith("GeneratorFunction");
+            const toStringTag = fn[Symbol.toStringTag];
+            const isGenerator = toStringTag?.endsWith("GeneratorFunction");
             if (isGenerator) {
                 const gen = fn(...args);
                 let result = await gen.next();
