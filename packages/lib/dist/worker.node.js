@@ -1,6 +1,7 @@
-import { isMainThread, workerData, parentPort, } from "node:worker_threads";
+import { isMainThread, workerData, parentPort } from "node:worker_threads";
 if (!isMainThread && parentPort) {
     const procMap = deserializeProcMap(workerData);
+    const postMessage = (data) => parentPort?.postMessage({ data });
     parentPort.on("message", async ({ id, path, args }) => {
         let scope = procMap;
         if (path.includes(".")) {
@@ -9,27 +10,26 @@ if (!isMainThread && parentPort) {
             // @ts-ignore
             scope = keys.reduce((acc, key) => acc[key], procMap);
         }
-        const pp = parentPort;
         try {
             // @ts-expect-error
-            globalThis.reportProgress = (progress) => pp.postMessage({ data: { id, progress } });
+            globalThis.reportProgress = (progress) => postMessage({ id, progress });
             const fn = getProc(path).bind(scope);
-            const isGenerator = fn[Symbol.toStringTag] === "AsyncGeneratorFunction";
+            const isGenerator = fn[Symbol.toStringTag].endsWith("GeneratorFunction");
             if (isGenerator) {
                 const gen = fn(...args);
                 let result = await gen.next();
                 while (!result.done) {
-                    pp.postMessage({ data: { id, progress: result.value } });
+                    postMessage({ id, progress: result.value });
                     result = await gen.next();
                 }
-                pp.postMessage({ data: { id, result: result.value } });
+                postMessage({ id, result: result.value });
                 return;
             }
             const result = await fn(...args);
-            pp.postMessage({ data: { id, result } });
+            postMessage({ id, result });
         }
         catch (error) {
-            pp.postMessage({ data: { id, error } });
+            postMessage({ id, error });
         }
     });
     function getProc(path) {

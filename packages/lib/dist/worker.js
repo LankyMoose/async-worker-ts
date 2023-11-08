@@ -21,7 +21,7 @@ onmessage = async (e) => {
         // @ts-expect-error
         globalThis.reportProgress = (progress) => postMessage({ id, progress });
         const fn = getProc(path).bind(scope);
-        const isGenerator = fn[Symbol.toStringTag] === "AsyncGeneratorFunction";
+        const isGenerator = fn[Symbol.toStringTag].endsWith("GeneratorFunction");
         if (isGenerator) {
             const gen = fn(...args);
             let result = await gen.next();

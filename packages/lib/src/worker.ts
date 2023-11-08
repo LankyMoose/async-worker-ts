@@ -28,8 +28,9 @@ onmessage = async (e) => {
       postMessage({ id, progress })
 
     const fn = getProc(path).bind(scope)
-    const isGenerator =
-      (fn as any)[Symbol.toStringTag] === "AsyncGeneratorFunction"
+    const isGenerator = ((fn as any)[Symbol.toStringTag] as string).endsWith(
+      "GeneratorFunction"
+    )
     if (isGenerator) {
       const gen = fn(...args)
       let result = await gen.next()
