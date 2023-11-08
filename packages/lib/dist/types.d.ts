@@ -23,11 +23,11 @@ export type AsyncWorkerClient<T extends IProcMap> = {
     concurrently: <E>(fn: (worker: AsyncWorkerClient<T>) => E) => Promise<E>;
     exit: () => Promise<void>;
 };
-export type ProcedurePromise<T> = Promise<T> & {
-    onProgress: (cb: (percent: number) => void) => ProcedurePromise<T>;
-} & T extends Generator<infer YieldResult, infer Return, infer Input> ? {
+type ProcedurePromise<T> = T extends Generator<infer YieldResult, infer Return, infer Input> ? Promise<Return> & {
     onYield: (cb: (value: YieldResult) => Input) => Promise<Return>;
-} : never;
+} : Promise<T> & {
+    onProgress: (cb: (percent: number) => void) => ProcedurePromise<T>;
+};
 export type WorkerParentMessage = {
     id: string;
     path: string;

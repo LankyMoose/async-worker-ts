@@ -32,6 +32,7 @@ onmessage = async (e) => {
     const isGenerator = toStringTag?.endsWith("GeneratorFunction")
 
     if (isGenerator) {
+      debugger
       const gen = await fn(...args)
       let result = await gen.next()
 
