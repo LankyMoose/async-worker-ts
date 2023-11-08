@@ -57,20 +57,26 @@ function deserializeProcMap(procMap: ISerializedProcMap) {
 }
 
 function parseFunc(str: string): (...args: any[]) => any {
-  const unnamedFunc = "function ("
-  const asyncUnnamedFunc = "async function ("
+  str = str.trim()
+  if (str.startsWith("function"))
+    str = str.replace("function", "async function")
 
-  if (str.substring(0, unnamedFunc.length) === unnamedFunc) {
-    return eval(`(${str.replace(unnamedFunc, "function thunk(")})`) as (
-      ...args: any[]
-    ) => any
-  }
-
-  if (str.substring(0, asyncUnnamedFunc.length) === asyncUnnamedFunc) {
+  const fn_name_default = "___awt_thunk___"
+  if (str.startsWith("async function (")) {
     return eval(
-      `(${str.replace(asyncUnnamedFunc, "async function thunk(")})`
-    ) as (...args: any[]) => any
+      `(${str.replace(
+        "async function (",
+        `async function ${fn_name_default}(`
+      )})`
+    )
+  } else if (str.startsWith("async function *(")) {
+    return eval(
+      `(${str.replace(
+        "async function *(",
+        `async function* ${fn_name_default}(`
+      )})`
+    )
   }
 
-  return eval(`(${str})`) as (...args: any[]) => any
+  return eval(`(${str})`)
 }

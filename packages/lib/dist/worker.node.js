@@ -42,13 +42,15 @@ function deserializeProcMap(procMap) {
     }, {});
 }
 function parseFunc(str) {
-    const unnamedFunc = "function (";
-    const asyncUnnamedFunc = "async function (";
-    if (str.substring(0, unnamedFunc.length) === unnamedFunc) {
-        return eval(`(${str.replace(unnamedFunc, "function thunk(")})`);
+    str = str.trim();
+    if (str.startsWith("function"))
+        str = str.replace("function", "async function");
+    const fn_name_default = "___awt_thunk___";
+    if (str.startsWith("async function (")) {
+        return eval(`(${str.replace("async function (", `async function ${fn_name_default}(`)})`);
     }
-    if (str.substring(0, asyncUnnamedFunc.length) === asyncUnnamedFunc) {
-        return eval(`(${str.replace(asyncUnnamedFunc, "async function thunk(")})`);
+    else if (str.startsWith("async function *(")) {
+        return eval(`(${str.replace("async function *(", `async function* ${fn_name_default}(`)})`);
     }
     return eval(`(${str})`);
 }
