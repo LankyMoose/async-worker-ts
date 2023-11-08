@@ -52,8 +52,30 @@ function playPingPong() {
           progress.value = iterations - i
         }
         li.remove()
-        return undefined
       })
       .then((res) => console.log("task complete", res))
   })
 }
+
+// const worker = useWorker({
+//   generatorTest: function* (): Generator<number, number, number> {
+//     console.log("worker - 1")
+//     const a = yield 1 // 2
+//     console.log("worker - 2", a)
+//     const b = yield 2 // 4
+//     console.log("worker - 3", b)
+//     return a + b // 6
+//   },
+// })
+
+// async function main() {
+//   await worker
+//     .generatorTest()
+//     .onYield(async (n) => {
+//       return n * 2
+//     })
+//     .then((res) => console.log("task complete", res))
+// }
+
+// await main()
+// worker.exit()

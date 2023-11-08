@@ -2,8 +2,11 @@ import useWorker, { reportProgress } from "async-worker-ts"
 
 const worker = useWorker({
   generatorTest: function* (): Generator<number, number, number> {
+    console.log("worker - 1")
     const a = yield 1 // 2
+    console.log("worker - 2", a)
     const b = yield 2 // 4
+    console.log("worker - 3", b)
     return a + b // 6
   },
 })
