@@ -25,7 +25,9 @@ export type AsyncWorkerClient<T extends IProcMap> = {
 };
 export type ProcedurePromise<T> = Promise<T> & {
     onProgress: (cb: (percent: number) => void) => ProcedurePromise<T>;
-};
+} & T extends Generator<infer YieldResult, infer Return, infer Input> ? {
+    onYield: (cb: (value: YieldResult) => Input) => Promise<Return>;
+} : never;
 export type WorkerParentMessage = {
     id: string;
     path: string;
