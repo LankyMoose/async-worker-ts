@@ -1,13 +1,10 @@
 import { isMainThread, workerData, parentPort } from "node:worker_threads"
 import type { WorkerParentMessage } from "./types"
 import {
-  customGenerator,
   deserializeProcMap,
   getProc,
   getProcMapScope,
-} from "./worker-funcs.js"
-
-let generatedFnMap: { [key: string]: string } = {}
+} from "./worker-shared.js"
 
 if (!isMainThread && parentPort) {
   const procMap = deserializeProcMap(workerData)
@@ -44,20 +41,7 @@ if (!isMainThread && parentPort) {
         })
       }
 
-      let fn = getProc(procMap, path)
-      const toStringTag = (fn as any)[Symbol.toStringTag]
-      const isGenerator = toStringTag?.endsWith("GeneratorFunction")
-
-      if (isGenerator) {
-        const genSrc =
-          generatedFnMap[path] ??
-          (generatedFnMap[path] = customGenerator(fn.toString()))
-
-        let gfn = eval(`(${genSrc})`) as (...args: any[]) => any
-        fn = gfn
-      }
-
-      const result = await fn.bind(scope)(...args)
+      const result = await getProc(procMap, path).bind(scope)(...args)
       postMessage({ id, result })
     } catch (error) {
       postMessage({ id, error })

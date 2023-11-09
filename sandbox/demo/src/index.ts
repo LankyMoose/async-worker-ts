@@ -1,24 +1,19 @@
-import useWorker, { reportProgress } from "async-worker-ts"
+import { worker } from "sandbox-shared"
 
-const worker = useWorker({
-  generatorTest: function* (): Generator<number, number, number> {
-    console.log("worker - 1")
-    const a = yield 1 // 2
-    console.log("worker - 2", a)
-    const b = yield 2 // 4
-    console.log("worker - 3", b)
-    return a + b // 6
-  },
-})
+const iterations = 10_000
 
-async function main() {
-  await worker
-    .generatorTest()
-    .onYield(async (n) => n * 2)
-    .then((res) => console.log("task complete", res))
+function playPingPong() {
+  return worker.concurrently(async (w) => {
+    let i = iterations
+    return w
+      .generatorTest()
+      .yield(function* () {
+        while ((yield "pong") === "ping" && i-- > 0);
+      })
+      .then((res) => console.log("task complete", res))
+  })
 }
-
-await main()
+await playPingPong()
 worker.exit()
 
 // await Promise.all([

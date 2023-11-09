@@ -1,8 +1,10 @@
 import { IProcMap, ISerializedProcMap } from "./types"
 
+export const AWT_DEBUG_GENERATED_SRC = false
+
 export function customGenerator(sourceCode: string) {
   const yieldRegex = /yield\s+([^;\n]+)(?=[;\n])/g // Regex to find 'yield' statements
-  let newSrc = nameFunc(sourceCode)
+  let newSrc = transformFunc(sourceCode)
   if (newSrc.substring(0, "async ".length) !== "async ") {
     newSrc = `async ${newSrc}`
   }
@@ -45,36 +47,33 @@ export function deserializeProcMap(procMap: ISerializedProcMap) {
   }, {} as IProcMap)
 }
 export function parseFunc(str: string): (...args: any[]) => any {
-  return eval(`(${nameFunc(str)})`)
+  const transformed = transformFunc(str)
+  return eval(`(${transformed})`)
 }
-export function nameFunc(str: string) {
-  const unnamedFunc = "function("
-  const unnamedGeneratorFunc = "function*("
-  const unnamedAsyncFunc = "async function("
-  const unnamedAsyncGeneratorFunc = "async function*("
+export function transformFunc(str: string) {
   str = str.trim()
 
   const fn_name_internal = "___thunk___"
+  let isGenerator = false
 
-  if (str.startsWith("function (")) str = str.replace("function (", unnamedFunc)
-  if (str.startsWith("async function ("))
-    str = str.replace("async function (", unnamedAsyncFunc)
-  if (str.startsWith("function* ("))
-    str = str.replace("function* (", unnamedGeneratorFunc)
-  if (str.startsWith("async function* ("))
-    str = str.replace("async function* (", unnamedAsyncGeneratorFunc)
-
-  if (str.startsWith(unnamedFunc))
-    return str.replace(unnamedFunc, `function ${fn_name_internal}(`)
-  if (str.startsWith(unnamedAsyncFunc))
-    return str.replace(unnamedAsyncFunc, `async function ${fn_name_internal}(`)
-  if (str.startsWith(unnamedGeneratorFunc))
-    return str.replace(unnamedGeneratorFunc, `function* ${fn_name_internal}(`)
-  if (str.startsWith(unnamedAsyncGeneratorFunc))
-    return str.replace(
-      unnamedAsyncGeneratorFunc,
+  if (str.startsWith("function (")) {
+    str = str.replace("function (", `function ${fn_name_internal}(`)
+  } else if (str.startsWith("async function (")) {
+    str = str.replace("async function (", `async function ${fn_name_internal}(`)
+  } else if (str.startsWith("function* (")) {
+    str = str.replace("function* (", `function* ${fn_name_internal}(`)
+    isGenerator = true
+  } else if (str.startsWith("async function* (")) {
+    str = str.replace(
+      "async function* (",
       `async function* ${fn_name_internal}(`
     )
+    isGenerator = true
+  }
+
+  if (isGenerator) str = customGenerator(str)
+  if (AWT_DEBUG_GENERATED_SRC) console.debug(str)
+
   return str
 }
 export function getProcMapScope(procMap: IProcMap, path: string) {

@@ -1,6 +1,5 @@
 import { isMainThread, workerData, parentPort } from "node:worker_threads";
-import { customGenerator, deserializeProcMap, getProc, getProcMapScope, } from "./worker-funcs.js";
-let generatedFnMap = {};
+import { deserializeProcMap, getProc, getProcMapScope, } from "./worker-shared.js";
 if (!isMainThread && parentPort) {
     const procMap = deserializeProcMap(workerData);
     const postMessage = (data) => parentPort?.postMessage({ data });
@@ -32,16 +31,7 @@ if (!isMainThread && parentPort) {
                     parentPort?.addListener("message", handler);
                 });
             };
-            let fn = getProc(procMap, path);
-            const toStringTag = fn[Symbol.toStringTag];
-            const isGenerator = toStringTag?.endsWith("GeneratorFunction");
-            if (isGenerator) {
-                const genSrc = generatedFnMap[path] ??
-                    (generatedFnMap[path] = customGenerator(fn.toString()));
-                let gfn = eval(`(${genSrc})`);
-                fn = gfn;
-            }
-            const result = await fn.bind(scope)(...args);
+            const result = await getProc(procMap, path).bind(scope)(...args);
             postMessage({ id, result });
         }
         catch (error) {

@@ -1,14 +1,12 @@
 import type { IProcMap, WorkerParentMessage } from "./types"
 import {
-  customGenerator,
   deserializeProcMap,
   getProc,
   getProcMapScope,
-} from "./worker-funcs.js"
+} from "./worker-shared.js"
 
 let didInit = false
 let procMap: IProcMap = {}
-let generatedFnMap: { [key: string]: string } = {}
 
 onmessage = async (e) => {
   if (!e.data) return
@@ -49,20 +47,7 @@ onmessage = async (e) => {
       })
     }
 
-    let fn = getProc(procMap, path)
-    const toStringTag = (fn as any)[Symbol.toStringTag]
-    const isGenerator = toStringTag?.endsWith("GeneratorFunction")
-
-    if (isGenerator) {
-      const genSrc =
-        generatedFnMap[path] ??
-        (generatedFnMap[path] = customGenerator(fn.toString()))
-
-      let gfn = eval(`(${genSrc})`) as (...args: any[]) => any
-      fn = gfn
-    }
-
-    const result = await fn.bind(scope)(...args)
+    const result = await getProc(procMap, path).bind(scope)(...args)
     postMessage({ id, result })
   } catch (error) {
     postMessage({ id, error })

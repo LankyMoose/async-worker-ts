@@ -1,14 +1,18 @@
 import "./style.css"
-import useWorker from "async-worker-ts"
+import { worker } from "sandbox-shared"
 
-let iterations = 1000
+const iterations = 10_000
 
 const appEl = document.getElementById("app")!
 
-appEl.appendChild(
+appEl.append(
   Object.assign(document.createElement("button"), {
     onclick: () => playPingPong(),
-    textContent: "Play ping pong",
+    textContent: "Ping pong",
+  }),
+  Object.assign(document.createElement("button"), {
+    onclick: () => calculatePi(),
+    textContent: "Pi time",
   })
 )
 
@@ -23,32 +27,18 @@ const createTaskUi = () => {
   const li = document.createElement("li")
   li.appendChild(progress)
   currentTasksEl.appendChild(li)
-  return {
-    progress,
-    li,
-  }
+  return { progress, li }
 }
-
-const worker = useWorker({
-  generatorTest: function* (): Generator<string, number, string> {
-    while ((yield "ping") === "pong");
-
-    return 123 as const
-  },
-})
 
 function playPingPong() {
   worker.concurrently(async (w) => {
     const { progress, li } = createTaskUi()
 
-    let id = Math.random().toString(36).slice(2)
     let i = iterations
     return w
       .generatorTest()
-      .yield(function* (str: string) {
-        let a = str
+      .yield(function* () {
         while ((yield "pong") === "ping" && i-- > 0) {
-          console.log("main thread - a", a, id)
           progress.value = iterations - i
         }
         li.remove()
@@ -57,25 +47,20 @@ function playPingPong() {
   })
 }
 
-// const worker = useWorker({
-//   generatorTest: function* (): Generator<number, number, number> {
-//     console.log("worker - 1")
-//     const a = yield 1 // 2
-//     console.log("worker - 2", a)
-//     const b = yield 2 // 4
-//     console.log("worker - 3", b)
-//     return a + b // 6
-//   },
-// })
+function calculatePi() {
+  worker.concurrently(async (w) => {
+    const { progress, li } = createTaskUi()
+    progress.max = 100_000_000
+    const pi_iters = 100_000_000
 
-// async function main() {
-//   await worker
-//     .generatorTest()
-//     .onYield(async (n) => {
-//       return n * 2
-//     })
-//     .then((res) => console.log("task complete", res))
-// }
-
-// await main()
-// worker.exit()
+    return w
+      .calculatePi(pi_iters)
+      .onProgress((p) => {
+        progress.value = p * pi_iters
+      })
+      .then((res) => {
+        console.log("task complete", res)
+        li.remove()
+      })
+  })
+}
