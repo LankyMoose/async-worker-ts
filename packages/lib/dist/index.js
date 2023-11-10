@@ -3,26 +3,22 @@ import { Task } from "./task.js";
 export default function (procMap) {
     return createClient(procMap);
 }
-export function task(fn, args) {
-    return new Task(fn, args);
+export function task(fn) {
+    return new Task(fn);
 }
 function createClient(map, worker = new AsyncWorker(map), path = "") {
-    return Object.entries(map).reduce((acc, [key]) => {
-        if (key === "exit")
+    return Object.entries(map).reduce((acc, [k]) => {
+        if (k === "exit")
             return acc;
-        const p = !path ? key : path + "." + key;
-        if (map[key] instanceof Task) {
+        const p = path ? path + "." + k : k;
+        const isCallable = map[k] instanceof Task || typeof map[k] === "function";
+        if (isCallable) {
             return Object.assign(acc, {
-                [key]: () => worker.call(p, true, ...Task.getTaskArgs(map[key])),
-            });
-        }
-        if (typeof map[key] === "function") {
-            return Object.assign(acc, {
-                [key]: (...args) => worker.call(p, false, ...args),
+                [k]: (...args) => worker.call(p, map[k] instanceof Task, ...args),
             });
         }
         return Object.assign(acc, {
-            [key]: createClient(map[key], worker, p),
+            [k]: createClient(map[k], worker, p),
         });
     }, {
         exit: () => worker.exit(),

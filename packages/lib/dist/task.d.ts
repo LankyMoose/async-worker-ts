@@ -1,12 +1,9 @@
-import { GenericArguments } from "./types";
-export interface ITask<T extends readonly unknown[], U extends GenericArguments<T>, V> {
-    (this: Task<any, any, any>, ...args: U): V;
+export interface ITask<T extends readonly unknown[], U> {
+    (...args: T): U;
 }
-export declare class Task<const T extends readonly unknown[], U extends GenericArguments<T>, V> {
+export declare class Task<const T extends readonly unknown[], U> {
     private readonly fn;
-    private getArgs;
-    constructor(fn: (this: Task<any, any, any>, ...args: U) => V, getArgs: T | (() => T));
+    constructor(fn: (this: Task<any, any>, ...args: T) => U);
     reportProgress(percent: number): void;
-    static getTaskArgs(task: Task<any, any, any>): any;
-    static getTaskFn(task: Task<any, any, any>): (this: Task<any, any, any>, ...args: any) => any;
+    static getTaskFn(task: Task<any, any>): (this: Task<any, any>, ...args: any) => any;
 }
