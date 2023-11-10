@@ -39,14 +39,7 @@ export class AsyncWorker {
                     const res = callback(data);
                     if (res instanceof Promise)
                         await res;
-                    wp.then(async (w) => {
-                        try {
-                            w.postMessage({ id: msgId, data: res });
-                        }
-                        catch (error) {
-                            console.error(error);
-                        }
-                    });
+                    wp.then(async (w) => w.postMessage({ id: msgId, data: res }));
                 };
                 wp.then((worker) => {
                     worker.addEventListener("message", emitHandler);

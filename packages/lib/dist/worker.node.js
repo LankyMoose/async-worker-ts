@@ -8,7 +8,7 @@ if (!isMainThread && parentPort) {
         if (!("path" in e))
             return;
         const scope = isTask
-            ? createTaskScope(postMessage, parentPort.removeListener, parentPort.addListener)
+            ? createTaskScope(postMessage, (event, handler) => parentPort.removeListener(event, handler), (event, handler) => parentPort.addListener(event, handler))
             : path.includes(".")
                 ? getProcMapScope(procMap, path)
                 : procMap;

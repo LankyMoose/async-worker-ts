@@ -22,7 +22,11 @@ onmessage = async (e) => {
   if (!("path" in e.data)) return
 
   const scope = isTask
-    ? createTaskScope(postMessage, removeEventListener, addEventListener)
+    ? createTaskScope(
+        postMessage,
+        (event: string, handler: any) => removeEventListener(event, handler),
+        (event: string, handler: any) => addEventListener(event, handler)
+      )
     : path.includes(".")
     ? getProcMapScope(procMap, path)
     : procMap

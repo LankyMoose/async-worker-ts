@@ -2,6 +2,11 @@ import { IProcMap, ISerializedProcMap } from "./types"
 
 export const AWT_DEBUG_GENERATED_SRC = false
 
+const isNode =
+  typeof process !== "undefined" &&
+  process.versions != null &&
+  process.versions.node != null
+
 export function createTaskScope(
   postMessage: (data: any) => void,
   removeListener: (event: string, handler: any) => void,
@@ -14,8 +19,9 @@ export function createTaskScope(
 
         return new Promise((resolve) => {
           const handler = async (event: MessageEvent) => {
-            if (!("data" in event.data)) return
-            const { id: responseId, data } = event.data
+            const d = isNode ? event : event.data
+            if (!("data" in d)) return
+            const { id: responseId, data } = d
             if (responseId !== msgId) return
             removeListener("message", handler)
             resolve(data)

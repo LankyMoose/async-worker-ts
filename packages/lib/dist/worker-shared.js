@@ -1,4 +1,7 @@
 export const AWT_DEBUG_GENERATED_SRC = false;
+const isNode = typeof process !== "undefined" &&
+    process.versions != null &&
+    process.versions.node != null;
 export function createTaskScope(postMessage, removeListener, addListener) {
     try {
         return {
@@ -6,9 +9,10 @@ export function createTaskScope(postMessage, removeListener, addListener) {
                 const msgId = crypto.randomUUID();
                 return new Promise((resolve) => {
                     const handler = async (event) => {
-                        if (!("data" in event.data))
+                        const d = isNode ? event : event.data;
+                        if (!("data" in d))
                             return;
-                        const { id: responseId, data } = event.data;
+                        const { id: responseId, data } = d;
                         if (responseId !== msgId)
                             return;
                         removeListener("message", handler);
