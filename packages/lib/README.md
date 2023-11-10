@@ -7,15 +7,13 @@
 ## Usage:
 
 ```ts
-import createWorker, { task, reportProgress } from "async-worker-ts"
+import createWorker, { task } from "async-worker-ts"
 
 const worker = createWorker({
   calculatePi: (iterations: number) => {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
-
-      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
     }
     return pi * 4
   },
@@ -33,17 +31,7 @@ const worker = createWorker({
   },
 })
 
-/**
- * Calling a procedure returns a ProcedurePromise that resolves to its
- * return value.
- * While the procedure is running, it can be used to listen to progress
- * reports.
- */
-await worker
-  .calculatePi(1_000_000)
-  .onProgress(console.log) // 0, 0.01, 0.02, ..., 0.99
-  .then(console.log) // 3.14159265258979
-
+await worker.calculatePi(1_000_000).then(console.log) // 3.14159265258979
 await worker.exit() // terminates the worker thread
 ```
 
@@ -52,7 +40,7 @@ await worker.exit() // terminates the worker thread
 ## Accessing procedures within procedures:
 
 ```ts
-import useWorker, { reportProgress } from "async-worker-ts"
+import useWorker from "async-worker-ts"
 
 const worker = useWorker({
   /**
@@ -64,9 +52,35 @@ const worker = useWorker({
     return a + b
   },
   randomNumber: () => {
-    return Math.random()
+    return Math.random() * 42
   },
 })
+```
+
+<br />
+
+## Reporting progress via Tasks:
+
+```ts
+import useWorker, { task } from "async-worker-ts"
+
+const worker = useWorker({
+  calculatePi: task(function (iterations: number) {
+    let pi = 0
+    for (let i = 0; i < iterations; i++) {
+      pi += Math.pow(-1, i) / (2 * i + 1)
+
+      // the "this" keyword in the context of a task refers to the task itself.
+      if (i % (iterations / 100) === 0) this.reportProgress(i / iterations)
+    }
+    return pi * 4
+  }),
+})
+
+await worker
+  .calculatePi(1_000_000)
+  .onProgress(console.log) // 0.01, 0.02, ...
+  .then(console.log) // 3.14159265258979
 ```
 
 <br />
@@ -74,15 +88,13 @@ const worker = useWorker({
 ## Concurrency and batching:
 
 ```ts
-import useWorker, { reportProgress } from "async-worker-ts"
+import useWorker from "async-worker-ts"
 
 const worker = useWorker({
   calculatePi: (iterations: number) => {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
-
-      if (i % (iterations / 100) === 0) reportProgress(i / iterations)
     }
     return pi * 4
   },
