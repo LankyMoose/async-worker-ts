@@ -12,16 +12,13 @@ export const worker = createWorkerClient({
     return 123
   },
 
-  calculatePi: task(
-    function (iterations: number) {
-      let pi = 0
-      for (let i = 0; i < iterations; i++) {
-        pi += Math.pow(-1, i) / (2 * i + 1)
+  calculatePi: task(function (iterations: number) {
+    let pi = 0
+    for (let i = 0; i < iterations; i++) {
+      pi += Math.pow(-1, i) / (2 * i + 1)
 
-        if (i % (iterations / 100) === 0) this.reportProgress(i / iterations)
-      }
-      return pi * 4
-    },
-    [settings.pi_iters]
-  ),
+      if (i % (iterations / 100) === 0) this.reportProgress(i / iterations)
+    }
+    return pi * 4
+  }),
 })

@@ -53,7 +53,7 @@ function calculatePi() {
     progress.max = settings.pi_iters
 
     return w
-      .calculatePi()
+      .calculatePi(settings.pi_iters)
       .onProgress((p) => {
         progress.value = p * settings.pi_iters
       })
