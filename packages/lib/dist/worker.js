@@ -1,4 +1,4 @@
-import { Task } from "./task";
+import { Task } from "./task.js";
 import { deserializeProcMap, getProc, getProcMapScope, } from "./worker-shared.js";
 let didInit = false;
 let procMap = {};

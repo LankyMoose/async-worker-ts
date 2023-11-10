@@ -1,6 +1,6 @@
 import { isMainThread, workerData, parentPort } from "node:worker_threads";
 import { deserializeProcMap, getProc, getProcMapScope, } from "./worker-shared.js";
-import { Task } from "./task";
+import { Task } from "./task.js";
 if (!isMainThread && parentPort) {
     const procMap = deserializeProcMap(workerData);
     const postMessage = (data) => parentPort?.postMessage({ data });
