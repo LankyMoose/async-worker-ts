@@ -13,6 +13,29 @@ export class AsyncWorker {
         const promise = new Promise(async (resolve, reject) => {
             const worker = await wp;
             const handler = (event) => {
+                if ("generator" in event.data) {
+                    return resolve((async function* (...next) {
+                        while (true) {
+                            const { value, done } = await new Promise((res) => {
+                                const handler = (event) => {
+                                    if (!("yield" in event.data))
+                                        return;
+                                    const { id: responseId, yield: yieldRes, done } = event.data;
+                                    if (responseId !== taskId)
+                                        return;
+                                    res({ value: yieldRes, done });
+                                };
+                                worker.addEventListener("message", handler);
+                                worker.postMessage({ id: taskId, next });
+                            });
+                            if (done) {
+                                worker.removeEventListener("message", handler);
+                                return value;
+                            }
+                            yield value;
+                        }
+                    })(...args));
+                }
                 if (!("result" in event.data))
                     return;
                 const { id: responseId, result, error } = event.data;

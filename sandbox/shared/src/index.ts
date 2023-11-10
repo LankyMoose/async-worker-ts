@@ -6,6 +6,16 @@ export const settings = {
 }
 
 export const worker = createWorkerClient({
+  generatorTest: async function* () {
+    //console.log("generatorTest", n)
+    yield 1
+    //console.log("generatorTest x", x)
+    yield 2
+    yield 3
+    yield 4
+    yield 69
+    //return 69
+  },
   pingPong: task(async function () {
     while ((await this.emit("ping")) === "pong");
 

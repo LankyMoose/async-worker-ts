@@ -19,7 +19,29 @@ onmessage = async (e) => {
             ? getProcMapScope(procMap, path)
             : procMap;
     try {
-        const result = await getProc(procMap, path).bind(scope)(...args);
+        const fn = getProc(procMap, path);
+        const result = await fn.bind(scope)(...args);
+        // check if the fn is a generator
+        if (result &&
+            result[Symbol.toStringTag]?.toString().includes("Generator")) {
+            // @ts-ignore
+            const iterator = result;
+            const next = async (value) => {
+                const { value: nextValue, done } = await iterator.next(value);
+                postMessage({ id, yield: nextValue, done });
+            };
+            const handler = (event) => {
+                if (!("next" in event.data))
+                    return;
+                const { id: responseId, next: nextValue } = event.data;
+                if (responseId === id) {
+                    next(nextValue);
+                }
+            };
+            addEventListener("message", handler);
+            postMessage({ id, generator: true });
+            return;
+        }
         postMessage({ id, result });
     }
     catch (error) {
