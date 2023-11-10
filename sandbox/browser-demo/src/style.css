@@ -20,6 +20,7 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 h1 {
@@ -76,5 +77,26 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+
+
+.clap {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: space-between;
+  animation: clapAnimation 2s linear;
+  cursor: default;
+}
+
+@keyframes clapAnimation {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-30px);
   }
 }

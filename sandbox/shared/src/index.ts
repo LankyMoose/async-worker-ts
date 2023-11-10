@@ -6,19 +6,28 @@ export const settings = {
 }
 
 export const worker = createWorkerClient({
-  generatorTest: function* (): Generator<string, number, string> {
-    while ((yield "ping") === "pong");
+  pingPong: task(async function () {
+    while ((await this.emit("ping")) === "pong");
 
     return 123
-  },
+  }),
 
   calculatePi: task(function (iterations: number) {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
       pi += Math.pow(-1, i) / (2 * i + 1)
 
-      if (i % (iterations / 100) === 0) this.reportProgress(i / iterations)
+      if (i % (iterations / 100) === 0) this.emit("progress", i / iterations)
     }
     return pi * 4
+  }),
+  slowClap: task(function (ms: number = 500) {
+    return new Promise((resolve) => {
+      const interval = setInterval(async () => {
+        if (await this.emit("continue")) return
+        clearInterval(interval)
+        resolve(true)
+      }, ms)
+    })
   }),
 })

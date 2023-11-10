@@ -1,5 +1,5 @@
 import { AsyncWorker } from "./async-worker.js"
-import { ITask, Task } from "./task.js"
+import { Task } from "./task.js"
 import { IProcMap, AsyncWorkerClient } from "./types.js"
 
 export default function <const T extends IProcMap>(procMap: T) {
@@ -8,8 +8,8 @@ export default function <const T extends IProcMap>(procMap: T) {
 
 export function task<const T extends readonly unknown[], U>(
   fn: (this: Task<any, any>, ...args: T) => U
-): ITask<T, U> {
-  return new Task(fn) as unknown as ITask<T, U>
+): Task<T, U> {
+  return new Task(fn)
 }
 
 function createClient<const T extends IProcMap>(

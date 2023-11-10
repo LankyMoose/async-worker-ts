@@ -29,64 +29,30 @@ export class AsyncWorker {
             worker.postMessage({ id: taskId, path, args, isTask });
         });
         return Object.assign(promise, {
-            yield: (genFunc) => {
-                let g;
-                const yieldHandler = async (event) => {
-                    if (!("yield" in event.data))
+            on: async (event, callback) => {
+                const emitHandler = async (e) => {
+                    if (!("event" in e.data))
                         return;
-                    const { id, yield: yieldValue } = event.data;
-                    if (id !== taskId)
+                    const { id: msgId, event: taskEvent, data } = e.data;
+                    if (taskEvent !== event)
                         return;
-                    if (!g)
-                        g = genFunc(yieldValue);
-                    const gRes = await g.next(yieldValue);
-                    if (gRes.done) {
-                        wp.then((worker) => worker.postMessage({ id, result: gRes.value }));
-                    }
-                    else {
-                        wp.then((worker) => worker.postMessage({ id, yield: gRes.value }));
-                    }
+                    const res = callback(data);
+                    if (res instanceof Promise)
+                        await res;
+                    wp.then(async (w) => {
+                        try {
+                            w.postMessage({ id: msgId, data: res });
+                        }
+                        catch (error) {
+                            console.error(error);
+                        }
+                    });
                 };
                 wp.then((worker) => {
-                    worker.addEventListener("message", yieldHandler);
+                    worker.addEventListener("message", emitHandler);
                     if (!this.completionCallbacks[taskId])
                         this.completionCallbacks[taskId] = [];
-                    this.completionCallbacks[taskId].push(() => worker.removeEventListener("message", yieldHandler));
-                });
-                return promise;
-            },
-            onYield: (cb) => {
-                const yieldHandler = async (event) => {
-                    if (!("yield" in event.data))
-                        return;
-                    const { id, yield: yieldValue } = event.data;
-                    if (id !== taskId)
-                        return;
-                    const result = await cb(yieldValue);
-                    wp.then((worker) => worker.postMessage({ id, yield: result }));
-                };
-                wp.then((worker) => {
-                    worker.addEventListener("message", yieldHandler);
-                    if (!this.completionCallbacks[taskId])
-                        this.completionCallbacks[taskId] = [];
-                    this.completionCallbacks[taskId].push(() => worker.removeEventListener("message", yieldHandler));
-                });
-                return promise;
-            },
-            onProgress: (cb) => {
-                const progressHandler = async (event) => {
-                    if (!("progress" in event.data))
-                        return;
-                    const { id, progress } = event.data;
-                    if (id !== taskId)
-                        return;
-                    cb(progress);
-                };
-                wp.then((worker) => {
-                    worker.addEventListener("message", progressHandler);
-                    if (!this.completionCallbacks[taskId])
-                        this.completionCallbacks[taskId] = [];
-                    this.completionCallbacks[taskId].push(() => worker.removeEventListener("message", progressHandler));
+                    this.completionCallbacks[taskId].push(() => worker.removeEventListener("message", emitHandler));
                 });
                 return promise;
             },

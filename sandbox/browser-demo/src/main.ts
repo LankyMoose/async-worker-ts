@@ -3,15 +3,17 @@ import { worker, settings } from "sandbox-shared"
 
 const appEl = document.getElementById("app")!
 
-appEl.append(
-  Object.assign(document.createElement("button"), {
-    onclick: () => playPingPong(),
-    textContent: "Ping pong",
-  }),
-  Object.assign(document.createElement("button"), {
-    onclick: () => calculatePi(),
-    textContent: "Pi time",
+function addTaskButton(label: string, cb: () => void) {
+  return Object.assign(document.createElement("button"), {
+    onclick: cb,
+    textContent: label,
   })
+}
+
+appEl.append(
+  addTaskButton("Ping pong", () => playPingPong()),
+  addTaskButton("Calculate pi", () => calculatePi()),
+  addTaskButton("Slow clap", () => slowClap())
 )
 
 const currentTasksEl = appEl.appendChild(document.createElement("ul"))
@@ -36,11 +38,10 @@ function playPingPong() {
 
     let i = settings.ping_pong_iters
     return w
-      .generatorTest()
-      .yield(function* () {
-        while ((yield "pong") === "ping" && i-- > 0) {
-          progress.value = settings.ping_pong_iters - i
-        }
+      .pingPong()
+      .on("ping", () => {
+        progress.value = settings.ping_pong_iters - i
+        if (--i > 0) return "pong"
         li.remove()
       })
       .then((res) => console.log("task complete", res))
@@ -52,9 +53,11 @@ function calculatePi() {
     const { progress, li } = createTaskUi()
     progress.max = settings.pi_iters
 
+    //console.log(w.calculatePi(2))
+
     return w
       .calculatePi(settings.pi_iters)
-      .onProgress((p) => {
+      .on("progress", (p: number) => {
         progress.value = p * settings.pi_iters
       })
       .then((res) => {
@@ -62,4 +65,36 @@ function calculatePi() {
         li.remove()
       })
   })
+}
+
+function slowClap() {
+  let claps = 10
+  worker
+    .slowClap()
+    .on("continue", () => {
+      console.log("continue?")
+      const el = createClapEl()
+      document.body.appendChild(el)
+      return --claps > 0
+    })
+    .then(() => {
+      console.log("task complete")
+    })
+}
+
+function createClapEl() {
+  const el = Object.assign(document.createElement("span"), {
+    innerText: "👏",
+    className: "clap",
+    style: `
+      position: absolute;
+      top: ${Math.random() * 100}%;
+      left: ${Math.random() * 100}%;
+      transform: translate(-50%, -50%);
+      font-size: ${Math.random() * 20 + 20}px;
+    `,
+    onanimationend: () => el.remove(),
+  })
+
+  return el
 }

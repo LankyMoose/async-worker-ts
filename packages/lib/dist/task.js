@@ -3,8 +3,10 @@ export class Task {
     constructor(fn) {
         this.fn = fn;
     }
-    // @ts-expect-error ts(6133)
-    reportProgress(percent) { }
+    // @ts-ignore ts(6133) ts(2355)
+    emit(event, data) {
+        throw new Error("emit() should only be called from within a worker task function");
+    }
     static getTaskFn(task) {
         return task.fn;
     }

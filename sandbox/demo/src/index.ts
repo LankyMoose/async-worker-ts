@@ -9,11 +9,12 @@ function playPingPong() {
         while ((yield "pong") === "ping" && i-- > 0);
       })
       .then((res) => console.log("task complete", res))
+      .then()
   })
 }
 
 await playPingPong()
-worker.exit()
+//worker.exit()
 
 // await Promise.all([
 //   //worker.add(1, 2).then(console.log),

@@ -1,9 +1,9 @@
-import { Task } from "./task.js"
 import type { IProcMap, WorkerParentMessage } from "./types"
 import {
   deserializeProcMap,
   getProc,
   getProcMapScope,
+  createTaskScope,
 } from "./worker-shared.js"
 
 let didInit = false
@@ -19,45 +19,15 @@ onmessage = async (e) => {
   }
 
   const { id, path, args, isTask } = e.data as WorkerParentMessage
-  if ("yield" in e.data) return
-  if ("result" in e.data) return
+  if (!("path" in e.data)) return
 
   const scope = isTask
-    ? (() => {
-        // @ts-expect-error
-        const t = new Task()
-        t.reportProgress = (progress: number) => postMessage({ id, progress })
-        return t
-      })()
+    ? createTaskScope(postMessage, removeEventListener, addEventListener)
     : path.includes(".")
     ? getProcMapScope(procMap, path)
     : procMap
 
   try {
-    Object.assign(globalThis, {
-      ["_____yield"]: async (value: any) => {
-        postMessage({ id, yield: value })
-
-        return new Promise((resolve) => {
-          const handler = async (event: MessageEvent) => {
-            if (!("yield" in event.data) && !("result" in event.data)) return
-            const {
-              id: responseId,
-              yield: yieldInputValue,
-              result,
-            } = event.data
-            if (responseId !== id) return
-
-            removeEventListener("message", handler)
-            if ("result" in event.data) return resolve(result)
-            resolve(yieldInputValue)
-          }
-
-          addEventListener("message", handler)
-        })
-      },
-    })
-
     const result = await getProc(procMap, path).bind(scope)(...args)
     postMessage({ id, result })
   } catch (error) {
