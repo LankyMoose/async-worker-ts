@@ -129,7 +129,7 @@ function serializeProcMap(map: IProcMap): ISerializedProcMap {
           typeof value === "function"
             ? value.toString()
             : value instanceof Task
-            ? value.fn.toString()
+            ? Task.getTaskFn(value).toString()
             : serializeProcMap(value),
       }),
     {}

@@ -1,7 +1,5 @@
 import "./style.css"
-import { worker } from "sandbox-shared"
-
-const iterations = 10_000
+import { worker, settings } from "sandbox-shared"
 
 const appEl = document.getElementById("app")!
 
@@ -20,7 +18,7 @@ const currentTasksEl = appEl.appendChild(document.createElement("ul"))
 
 const createTaskUi = () => {
   const progress = Object.assign(document.createElement("progress"), {
-    max: iterations,
+    max: 1,
     value: 0,
   })
 
@@ -34,12 +32,14 @@ function playPingPong() {
   worker.concurrently(async (w) => {
     const { progress, li } = createTaskUi()
 
-    let i = iterations
+    progress.max = settings.ping_pong_iters
+
+    let i = settings.ping_pong_iters
     return w
       .generatorTest()
       .yield(function* () {
         while ((yield "pong") === "ping" && i-- > 0) {
-          progress.value = iterations - i
+          progress.value = settings.ping_pong_iters - i
         }
         li.remove()
       })
@@ -50,13 +50,12 @@ function playPingPong() {
 function calculatePi() {
   worker.concurrently(async (w) => {
     const { progress, li } = createTaskUi()
-    progress.max = 100_000_000
-    const pi_iters = 100_000_000
+    progress.max = settings.pi_iters
 
     return w
-      .calculatePi(pi_iters)
+      .calculatePi()
       .onProgress((p) => {
-        progress.value = p * pi_iters
+        progress.value = p * settings.pi_iters
       })
       .then((res) => {
         console.log("task complete", res)

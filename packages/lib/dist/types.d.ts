@@ -1,4 +1,4 @@
-import { Task } from "./task";
+import { ITask, Task } from "./task";
 type SerializablePropertyKey = string | number;
 type Func = (...args: any[]) => any;
 type Primitive = string | number | boolean;
@@ -36,7 +36,7 @@ export type WorkerParentMessage = {
     yield?: unknown;
     result?: unknown;
 };
-type InferredClientProc<T> = T extends Task<any, any, infer E> ? () => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends IProcMap ? {
+type InferredClientProc<T> = T extends ITask<any, any, infer E> ? () => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends IProcMap ? {
     [K in keyof T]: InferredClientProc<T[K]>;
 } : never;
 export {};

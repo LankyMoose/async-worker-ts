@@ -5,9 +5,7 @@ export interface ITask<
   U extends GenericArguments<T>,
   V
 > {
-  fn: (...args: U) => V
-  getArgs: () => T
-  (...args: U): V
+  (this: Task<any, any, any>, ...args: U): V
 }
 
 export class Task<
@@ -15,8 +13,20 @@ export class Task<
   U extends GenericArguments<T>,
   V
 > {
-  constructor(public readonly fn: (...args: U) => V, getArgs: T | (() => T)) {
+  private getArgs: () => T
+  constructor(
+    private readonly fn: (this: Task<any, any, any>, ...args: U) => V,
+    getArgs: T | (() => T)
+  ) {
     this.getArgs = typeof getArgs === "function" ? getArgs : () => getArgs
   }
-  public getArgs: () => T
+
+  public reportProgress(_percent: number): void {}
+
+  static getTaskArgs(task: Task<any, any, any>) {
+    return task.getArgs()
+  }
+  static getTaskFn(task: Task<any, any, any>) {
+    return task.fn
+  }
 }

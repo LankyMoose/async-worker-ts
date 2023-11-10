@@ -109,7 +109,7 @@ function serializeProcMap(map) {
         [key]: typeof value === "function"
             ? value.toString()
             : value instanceof Task
-                ? value.fn.toString()
+                ? Task.getTaskFn(value).toString()
                 : serializeProcMap(value),
     }), {});
 }

@@ -1,10 +1,8 @@
-import { worker } from "sandbox-shared"
-
-const iterations = 10_000
+import { settings, worker } from "sandbox-shared"
 
 function playPingPong() {
   return worker.concurrently(async (w) => {
-    let i = iterations
+    let i = settings.ping_pong_iters
     return w
       .generatorTest()
       .yield(function* () {
@@ -13,6 +11,7 @@ function playPingPong() {
       .then((res) => console.log("task complete", res))
   })
 }
+
 await playPingPong()
 worker.exit()
 
