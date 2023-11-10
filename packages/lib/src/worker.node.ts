@@ -5,7 +5,7 @@ import {
   getProc,
   getProcMapScope,
 } from "./worker-shared.js"
-import { Task } from "./task"
+import { Task } from "./task.js"
 
 if (!isMainThread && parentPort) {
   const procMap = deserializeProcMap(workerData)

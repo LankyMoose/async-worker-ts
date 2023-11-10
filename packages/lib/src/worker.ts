@@ -1,4 +1,4 @@
-import { Task } from "./task"
+import { Task } from "./task.js"
 import type { IProcMap, WorkerParentMessage } from "./types"
 import {
   deserializeProcMap,
