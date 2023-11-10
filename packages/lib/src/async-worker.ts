@@ -11,7 +11,11 @@ export class AsyncWorker {
     this.serializedProcMap = serializeProcMap(procMap)
   }
 
-  public call(path: string, ...args: unknown[]): ProcedurePromise<unknown> {
+  public call(
+    path: string,
+    isTask: boolean,
+    ...args: unknown[]
+  ): ProcedurePromise<unknown> {
     const taskId = crypto.randomUUID()
     const wp = this.getWorker()
 
@@ -32,7 +36,7 @@ export class AsyncWorker {
         }
       }
       worker.addEventListener("message", handler)
-      worker.postMessage({ id: taskId, path, args })
+      worker.postMessage({ id: taskId, path, args, isTask })
     }) as Partial<ProcedurePromise<unknown>>
 
     return Object.assign(promise, {

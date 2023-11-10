@@ -6,7 +6,7 @@ export declare class Task<const T extends readonly unknown[], U extends GenericA
     private readonly fn;
     private getArgs;
     constructor(fn: (this: Task<any, any, any>, ...args: U) => V, getArgs: T | (() => T));
-    reportProgress(_percent: number): void;
+    reportProgress(percent: number): void;
     static getTaskArgs(task: Task<any, any, any>): any;
     static getTaskFn(task: Task<any, any, any>): (this: Task<any, any, any>, ...args: any) => any;
 }

@@ -4,7 +4,7 @@ export declare class AsyncWorker {
     private worker;
     private completionCallbacks;
     constructor(procMap: IProcMap);
-    call(path: string, ...args: unknown[]): ProcedurePromise<unknown>;
+    call(path: string, isTask: boolean, ...args: unknown[]): ProcedurePromise<unknown>;
     private getWorker;
     exit(): Promise<void>;
 }

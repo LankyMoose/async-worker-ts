@@ -25,5 +25,3 @@ export const worker = createWorkerClient({
     [settings.pi_iters]
   ),
 })
-
-//worker.calculatePi(100000000)

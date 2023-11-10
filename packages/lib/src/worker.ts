@@ -1,3 +1,4 @@
+import { Task } from "./task"
 import type { IProcMap, WorkerParentMessage } from "./types"
 import {
   deserializeProcMap,
@@ -17,35 +18,45 @@ onmessage = async (e) => {
     return
   }
 
-  const { id, path, args } = e.data as WorkerParentMessage
+  const { id, path, args, isTask } = e.data as WorkerParentMessage
   if ("yield" in e.data) return
   if ("result" in e.data) return
 
-  const scope = path.includes(".") ? getProcMapScope(procMap, path) : procMap
+  const scope = isTask
+    ? (() => {
+        // @ts-expect-error
+        const t = new Task()
+        t.reportProgress = (progress: number) => postMessage({ id, progress })
+        return t
+      })()
+    : path.includes(".")
+    ? getProcMapScope(procMap, path)
+    : procMap
 
   try {
-    // @ts-expect-error
-    globalThis.reportProgress = (progress: number) =>
-      postMessage({ id, progress })
+    Object.assign(globalThis, {
+      ["_____yield"]: async (value: any) => {
+        postMessage({ id, yield: value })
 
-    // @ts-expect-error
-    globalThis._____yield = async (value: any) => {
-      postMessage({ id, yield: value })
+        return new Promise((resolve) => {
+          const handler = async (event: MessageEvent) => {
+            if (!("yield" in event.data) && !("result" in event.data)) return
+            const {
+              id: responseId,
+              yield: yieldInputValue,
+              result,
+            } = event.data
+            if (responseId !== id) return
 
-      return new Promise((resolve) => {
-        const handler = async (event: MessageEvent) => {
-          if (!("yield" in event.data) && !("result" in event.data)) return
-          const { id: responseId, yield: yieldInputValue, result } = event.data
-          if (responseId !== id) return
+            removeEventListener("message", handler)
+            if ("result" in event.data) return resolve(result)
+            resolve(yieldInputValue)
+          }
 
-          removeEventListener("message", handler)
-          if ("result" in event.data) return resolve(result)
-          resolve(yieldInputValue)
-        }
-
-        addEventListener("message", handler)
-      })
-    }
+          addEventListener("message", handler)
+        })
+      },
+    })
 
     const result = await getProc(procMap, path).bind(scope)(...args)
     postMessage({ id, result })

@@ -78,6 +78,7 @@ export type WorkerParentMessage = {
   args: unknown[]
   yield?: unknown
   result?: unknown
+  isTask?: boolean
 }
 
 type InferredClientProc<T> = T extends ITask<any, any, infer E>

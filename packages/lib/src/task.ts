@@ -21,7 +21,8 @@ export class Task<
     this.getArgs = typeof getArgs === "function" ? getArgs : () => getArgs
   }
 
-  public reportProgress(_percent: number): void {}
+  // @ts-expect-error ts(6133)
+  public reportProgress(percent: number): void {}
 
   static getTaskArgs(task: Task<any, any, any>) {
     return task.getArgs()

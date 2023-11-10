@@ -7,7 +7,7 @@ export class AsyncWorker {
     constructor(procMap) {
         this.serializedProcMap = serializeProcMap(procMap);
     }
-    call(path, ...args) {
+    call(path, isTask, ...args) {
         const taskId = crypto.randomUUID();
         const wp = this.getWorker();
         const promise = new Promise(async (resolve, reject) => {
@@ -26,7 +26,7 @@ export class AsyncWorker {
                 }
             };
             worker.addEventListener("message", handler);
-            worker.postMessage({ id: taskId, path, args });
+            worker.postMessage({ id: taskId, path, args, isTask });
         });
         return Object.assign(promise, {
             yield: (genFunc) => {

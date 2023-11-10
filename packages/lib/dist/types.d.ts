@@ -35,6 +35,7 @@ export type WorkerParentMessage = {
     args: unknown[];
     yield?: unknown;
     result?: unknown;
+    isTask?: boolean;
 };
 type InferredClientProc<T> = T extends ITask<any, any, infer E> ? () => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends IProcMap ? {
     [K in keyof T]: InferredClientProc<T[K]>;

@@ -29,6 +29,7 @@ function createClient<const T extends IProcMap>(
           [key]: () =>
             worker.call(
               p,
+              true,
               ...Task.getTaskArgs(map[key] as Task<any[], any, any>)
             ),
         })
@@ -36,7 +37,7 @@ function createClient<const T extends IProcMap>(
 
       if (typeof map[key] === "function") {
         return Object.assign(acc, {
-          [key]: (...args: any[]) => worker.call(p, ...args),
+          [key]: (...args: any[]) => worker.call(p, false, ...args),
         })
       }
 

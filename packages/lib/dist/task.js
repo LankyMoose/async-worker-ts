@@ -5,7 +5,8 @@ export class Task {
         this.fn = fn;
         this.getArgs = typeof getArgs === "function" ? getArgs : () => getArgs;
     }
-    reportProgress(_percent) { }
+    // @ts-expect-error ts(6133)
+    reportProgress(percent) { }
     static getTaskArgs(task) {
         return task.getArgs();
     }

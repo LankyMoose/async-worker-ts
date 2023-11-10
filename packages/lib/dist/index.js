@@ -13,12 +13,12 @@ function createClient(map, worker = new AsyncWorker(map), path = "") {
         const p = !path ? key : path + "." + key;
         if (map[key] instanceof Task) {
             return Object.assign(acc, {
-                [key]: () => worker.call(p, ...Task.getTaskArgs(map[key])),
+                [key]: () => worker.call(p, true, ...Task.getTaskArgs(map[key])),
             });
         }
         if (typeof map[key] === "function") {
             return Object.assign(acc, {
-                [key]: (...args) => worker.call(p, ...args),
+                [key]: (...args) => worker.call(p, false, ...args),
             });
         }
         return Object.assign(acc, {
