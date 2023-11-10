@@ -32,7 +32,7 @@ export class AsyncWorker {
                                 worker.removeEventListener("message", handler);
                                 return value;
                             }
-                            yield value;
+                            next = yield value;
                         }
                     })(...args));
                 }
