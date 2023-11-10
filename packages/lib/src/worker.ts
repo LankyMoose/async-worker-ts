@@ -18,8 +18,8 @@ onmessage = async (e) => {
     return
   }
 
-  const { id, path, args, isTask } = e.data as WorkerParentMessage
   if (!("path" in e.data)) return
+  const { id, path, args, isTask } = e.data as WorkerParentMessage
 
   const scope = isTask
     ? createTaskScope(

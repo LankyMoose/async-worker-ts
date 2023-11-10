@@ -12,8 +12,8 @@ if (!isMainThread && parentPort) {
   const postMessage = (data: any) => parentPort?.postMessage({ data })
 
   parentPort.on("message", async (e: WorkerParentMessage) => {
-    const { id, path, args, isTask } = e as WorkerParentMessage
     if (!("path" in e)) return
+    const { id, path, args, isTask } = e
 
     const scope = isTask
       ? createTaskScope(

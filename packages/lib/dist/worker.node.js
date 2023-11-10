@@ -4,9 +4,9 @@ if (!isMainThread && parentPort) {
     const procMap = deserializeProcMap(workerData);
     const postMessage = (data) => parentPort?.postMessage({ data });
     parentPort.on("message", async (e) => {
-        const { id, path, args, isTask } = e;
         if (!("path" in e))
             return;
+        const { id, path, args, isTask } = e;
         const scope = isTask
             ? createTaskScope(postMessage, (event, handler) => parentPort.removeListener(event, handler), (event, handler) => parentPort.addListener(event, handler))
             : path.includes(".")

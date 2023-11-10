@@ -10,9 +10,9 @@ onmessage = async (e) => {
         postMessage("initialized");
         return;
     }
-    const { id, path, args, isTask } = e.data;
     if (!("path" in e.data))
         return;
+    const { id, path, args, isTask } = e.data;
     const scope = isTask
         ? createTaskScope(postMessage, (event, handler) => removeEventListener(event, handler), (event, handler) => addEventListener(event, handler))
         : path.includes(".")
