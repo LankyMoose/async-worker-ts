@@ -15,13 +15,14 @@ export type AsyncWorkerClient<T extends IProcMap> = {
 export type ProcedurePromise<T> = Promise<T> & {
     on: (event: string, callback: (data?: any) => void) => ProcedurePromise<T>;
 };
-export type WorkerParentMessage = {
+export type WorkerMessage = {
     id: string;
     path: string;
     args: unknown[];
-    yield?: unknown;
-    result?: unknown;
     isTask?: boolean;
+    next?: unknown;
+    return?: unknown;
+    throw?: unknown;
 };
 type InferredClientProc<T> = T extends Task<infer Args, infer E> ? (...args: Args) => E extends ProcedurePromise<any> ? E : ProcedurePromise<E> : T extends Func ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>> : T extends IProcMap ? {
     [K in keyof T]: InferredClientProc<T[K]>;

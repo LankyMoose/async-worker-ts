@@ -21,13 +21,18 @@ export type ProcedurePromise<T> = Promise<T> & {
   on: (event: string, callback: (data?: any) => void) => ProcedurePromise<T>
 }
 
-export type WorkerParentMessage = {
+export type WorkerMessage = {
+  // unique id for this message, used to match up responses
   id: string
+  // path to procedure, e.g. "foo.bar.baz" - only exists on procedure or task calls.
   path: string
   args: unknown[]
-  yield?: unknown
-  result?: unknown
+  // identifies a task, as opposed to a procedure - tasks have a uniquely bound scope.
   isTask?: boolean
+  // generator proxied events
+  next?: unknown
+  return?: unknown
+  throw?: unknown
 }
 
 type InferredClientProc<T> = T extends Task<infer Args, infer E>

@@ -18,12 +18,12 @@ export class AsyncWorker {
                         while (true) {
                             const { value, done } = await new Promise(async (res) => {
                                 const handler = (event) => {
-                                    if (!("yield" in event.data))
+                                    if (!("next" in event.data))
                                         return;
-                                    const { id: responseId, yield: yieldRes, done, } = event.data;
+                                    const { id: responseId, next: nextRes, done, } = event.data;
                                     if (responseId !== taskId)
                                         return;
-                                    res({ value: yieldRes, done });
+                                    res({ value: nextRes, done });
                                 };
                                 if (next && next.length > 0)
                                     await Promise.all(next);

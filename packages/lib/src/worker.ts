@@ -1,4 +1,4 @@
-import type { IProcMap, WorkerParentMessage } from "./types"
+import type { IProcMap, WorkerMessage } from "./types"
 import {
   deserializeProcMap,
   getProc,
@@ -19,7 +19,7 @@ onmessage = async (e) => {
   }
 
   if (!("path" in e.data)) return
-  const { id, path, args, isTask } = e.data as WorkerParentMessage
+  const { id, path, args, isTask } = e.data as WorkerMessage
 
   const scope = isTask
     ? createTaskScope(
@@ -34,14 +34,14 @@ onmessage = async (e) => {
   try {
     const fn = getProc(procMap, path)
     const result = await fn.bind(scope)(...args)
-    // check if the fn is a generator
+
     if (
       result &&
       result[Symbol.toStringTag]?.toString().includes("Generator")
     ) {
       const generator = result as Generator | AsyncGenerator
 
-      const handler = async (event: MessageEvent) => {
+      const handler = async (event: MessageEvent<WorkerMessage>) => {
         if (
           !("next" in event.data) &&
           !("return" in event.data) &&
@@ -49,30 +49,20 @@ onmessage = async (e) => {
         )
           return
 
-        const {
-          id: responseId,
-          next: nextValue,
-          return: returnValue,
-          throw: throwValue,
-        } = event.data
+        const { id: responseId } = event.data
         if (responseId !== id) return
 
-        if ("throw" in event.data) {
-          const res = await generator.throw(throwValue)
-          postMessage({ id, throw: res.value, done: res.done })
-          removeEventListener("message", handler)
-          return
-        }
+        const key =
+          "next" in event.data
+            ? "next"
+            : "return" in event.data
+            ? "return"
+            : "throw"
 
-        if ("return" in event.data) {
-          const res = await generator.return(returnValue)
-          postMessage({ id, return: res.value, done: res.done })
+        const res = await generator[key](event.data[key])
+        postMessage({ id, [key]: res.value, done: res.done })
+        if (key === "throw" || key === "return")
           removeEventListener("message", handler)
-          return
-        }
-
-        const { value, done } = await generator.next(nextValue)
-        postMessage({ id, yield: value, done })
       }
 
       addEventListener("message", handler)

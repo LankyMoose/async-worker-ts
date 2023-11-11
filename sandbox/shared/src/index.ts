@@ -15,10 +15,11 @@ export const worker = createWorkerClient({
       yield 69
     } catch (error) {
       console.log("generatorTest caught er", error)
-      yield "error"
+      //return 123
+      //yield 123
     } finally {
       console.log("generatorTest finally")
-      yield "finally"
+      return "finally"
     }
   },
   pingPong: task(async function () {
