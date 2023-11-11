@@ -1,11 +1,13 @@
 const isNodeEnv = typeof process !== "undefined" && process.versions.node;
 export class OmniWorker {
     worker = undefined;
-    constructor(ctor, workerData) {
+    constructor(ctor, workerData, maxListeners = 256) {
         this.worker = new ctor(new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url), {
             workerData,
             type: "module",
         });
+        if (isNodeEnv)
+            this.worker.setMaxListeners(maxListeners);
     }
     postMessage(message, transfer) {
         if (!this.worker)

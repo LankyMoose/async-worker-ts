@@ -10,7 +10,11 @@ const isNodeEnv = typeof process !== "undefined" && process.versions.node
 export class OmniWorker {
   private worker: (Worker | NodeWorker) | undefined = undefined
 
-  constructor(ctor: WorkerCtor | NodeWorkerCtor, workerData: any) {
+  constructor(
+    ctor: WorkerCtor | NodeWorkerCtor,
+    workerData: any,
+    maxListeners: number = 256
+  ) {
     this.worker = new ctor(
       new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url),
       {
@@ -18,6 +22,7 @@ export class OmniWorker {
         type: "module",
       }
     )
+    if (isNodeEnv) (this.worker as NodeWorker).setMaxListeners(maxListeners)
   }
 
   public postMessage(
