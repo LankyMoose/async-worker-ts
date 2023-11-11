@@ -100,23 +100,30 @@ function createClapEl() {
 }
 
 async function generate() {
-  // for await (const value of await worker.generatorTest()) {
+  const gen = await worker.generatorTest()
+  // for await (const value of gen) {
   //   console.log("generator value", value)
   // }
-  const gen = await worker.generatorTest()
-  console.log("gen", gen)
-  const nxt = await gen.next("hello")
+  //const last = await gen.next()
+  //console.log("last", last)
+  // console.log("gen", gen)
+  const nxt = await gen.next()
   console.log("nxt", nxt)
-  const nxt2 = await gen.next()
-  console.log("nxt2", nxt2)
-  const nxt3 = await gen.next()
-  console.log("nxt3", nxt3)
-  const nxt4 = await gen.next()
-  console.log("nxt4", nxt4)
-  const nxt5 = await gen.next()
-  console.log("nxt5", nxt5)
-  const nxt6 = await gen.next()
-  console.log("nxt6", nxt6)
+  const err = await gen.throw(new Error("test"))
+  console.log("err", err)
+
+  // const ret = await gen.return()
+  // console.log("ret", ret)
+  // const nxt2 = await gen.next()
+  // console.log("nxt2", nxt2)
+  // const nxt3 = await gen.next()
+  // console.log("nxt3", nxt3)
+  // const nxt4 = await gen.next()
+  // console.log("nxt4", nxt4)
+  // const nxt5 = await gen.next()
+  // console.log("nxt5", nxt5)
+  // const nxt6 = await gen.next()
+  // console.log("nxt6", nxt6)
 }
 
 generate()

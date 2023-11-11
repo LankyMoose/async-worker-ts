@@ -24,29 +24,78 @@ export class AsyncWorker {
       const handler = (event: MessageEvent) => {
         if ("generator" in event.data) {
           return resolve(
-            (async function* (...next: any[]) {
-              while (true) {
-                const { value, done } = await new Promise<any>((res) => {
-                  const handler = (event: MessageEvent) => {
-                    if (!("yield" in event.data)) return
-                    const { id: responseId, yield: yieldRes, done } = event.data
+            Object.assign(
+              (async function* (...next: any[]) {
+                while (true) {
+                  const { value, done } = await new Promise<any>(
+                    async (res) => {
+                      const handler = (event: MessageEvent) => {
+                        if (!("yield" in event.data)) return
+                        const {
+                          id: responseId,
+                          yield: yieldRes,
+                          done,
+                        } = event.data
 
-                    if (responseId !== taskId) return
+                        if (responseId !== taskId) return
 
-                    res({ value: yieldRes, done })
+                        res({ value: yieldRes, done })
+                      }
+
+                      if (next && next.length > 0) await Promise.all(next)
+                      worker.addEventListener("message", handler)
+                      worker.postMessage({ id: taskId, next })
+                    }
+                  )
+
+                  if (done) {
+                    worker.removeEventListener("message", handler)
+                    return value
                   }
-
-                  worker.addEventListener("message", handler)
-                  worker.postMessage({ id: taskId, next })
-                })
-
-                if (done) {
-                  worker.removeEventListener("message", handler)
-                  return value
+                  next = yield value
                 }
-                next = yield value
+              })(...args),
+              {
+                return: (value: any): Promise<IteratorResult<any, any>> => {
+                  return new Promise((res) => {
+                    worker.postMessage({ id: taskId, return: value })
+
+                    const handler = (event: MessageEvent) => {
+                      if (!("return" in event.data)) return
+                      const {
+                        id: responseId,
+                        return: returnRes,
+                        done,
+                      } = event.data
+                      if (responseId !== taskId) return
+                      worker.removeEventListener("message", handler)
+                      res({ value: returnRes, done })
+                    }
+
+                    worker.addEventListener("message", handler)
+                  })
+                },
+                throw: (error: any): Promise<IteratorResult<any, any>> => {
+                  return new Promise((res) => {
+                    worker.postMessage({ id: taskId, throw: error })
+
+                    const handler = (event: MessageEvent) => {
+                      if (!("throw" in event.data)) return
+                      const {
+                        id: responseId,
+                        throw: throwRes,
+                        done,
+                      } = event.data
+                      if (responseId !== taskId) return
+                      worker.removeEventListener("message", handler)
+                      res({ value: throwRes, done })
+                    }
+
+                    worker.addEventListener("message", handler)
+                  })
+                },
               }
-            })(...args)
+            )
           )
         }
 

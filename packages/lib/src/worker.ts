@@ -39,24 +39,43 @@ onmessage = async (e) => {
       result &&
       result[Symbol.toStringTag]?.toString().includes("Generator")
     ) {
-      // @ts-ignore
-      const iterator = result as Generator | AsyncGenerator
+      const generator = result as Generator | AsyncGenerator
 
-      const next = async (value: any) => {
-        const { value: nextValue, done } = await iterator.next(value)
-        postMessage({ id, yield: nextValue, done })
-      }
+      const handler = async (event: MessageEvent) => {
+        if (
+          !("next" in event.data) &&
+          !("return" in event.data) &&
+          !("throw" in event.data)
+        )
+          return
 
-      const handler = (event: MessageEvent) => {
-        if (!("next" in event.data)) return
-        const { id: responseId, next: nextValue } = event.data
-        if (responseId === id) {
-          next(nextValue)
+        const {
+          id: responseId,
+          next: nextValue,
+          return: returnValue,
+          throw: throwValue,
+        } = event.data
+        if (responseId !== id) return
+
+        if ("throw" in event.data) {
+          const res = await generator.throw(throwValue)
+          postMessage({ id, throw: res.value, done: res.done })
+          removeEventListener("message", handler)
+          return
         }
+
+        if ("return" in event.data) {
+          const res = await generator.return(returnValue)
+          postMessage({ id, return: res.value, done: res.done })
+          removeEventListener("message", handler)
+          return
+        }
+
+        const { value, done } = await generator.next(nextValue)
+        postMessage({ id, yield: value, done })
       }
 
       addEventListener("message", handler)
-
       postMessage({ id, generator: true })
       return
     }
