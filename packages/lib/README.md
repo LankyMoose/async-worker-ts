@@ -59,7 +59,7 @@ const worker = useWorker({
 
 <br />
 
-## Reporting progress via Tasks:
+## Emitting data via Tasks:
 
 ```ts
 import useWorker, { task } from "async-worker-ts"
@@ -71,7 +71,7 @@ const worker = useWorker({
       pi += Math.pow(-1, i) / (2 * i + 1)
 
       // the "this" keyword in the context of a task refers to the task itself.
-      if (i % (iterations / 100) === 0) this.reportProgress(i / iterations)
+      if (i % (iterations / 100) === 0) this.emit("progress", i / iterations)
     }
     return pi * 4
   }),
@@ -79,7 +79,7 @@ const worker = useWorker({
 
 await worker
   .calculatePi(1_000_000)
-  .onProgress(console.log) // 0.01, 0.02, ...
+  .on("progress", console.log) // 0.01, 0.02, ...
   .then(console.log) // 3.14159265258979
 ```
 
