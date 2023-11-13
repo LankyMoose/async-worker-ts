@@ -1,6 +1,6 @@
 {
   "name": "async-worker-ts",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "🔱 A type-safe package designed to simplify the usage of worker threads on the server or browser.",
   "main": "dist/index.js",
   "type": "module",
