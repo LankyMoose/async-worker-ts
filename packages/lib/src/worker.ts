@@ -2,7 +2,7 @@ import type { IProcMap, WorkerMessage } from "./types"
 import {
   deserializeProcMap,
   getProc,
-  getProcMapScope,
+  getProcScope,
   createTaskScope,
 } from "./worker-shared.js"
 
@@ -28,7 +28,7 @@ onmessage = async (e) => {
         (event: string, handler: any) => addEventListener(event, handler)
       )
     : path.includes(".")
-    ? getProcMapScope(procMap, path)
+    ? getProcScope(procMap, path)
     : procMap
 
   try {
@@ -59,10 +59,11 @@ onmessage = async (e) => {
             ? "return"
             : "throw"
 
-        const res = await generator[key](event.data[key])
+        const res = await (generator[key] as (...args: any) => any)(
+          ...(event.data[key] as any)
+        )
+        if (res.done) removeEventListener("message", handler)
         postMessage({ id, [key]: res.value, done: res.done })
-        if (key === "throw" || key === "return")
-          removeEventListener("message", handler)
       }
 
       addEventListener("message", handler)

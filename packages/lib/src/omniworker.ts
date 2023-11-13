@@ -64,7 +64,7 @@ export class OmniWorker {
     ;(this.worker as Worker).removeEventListener(event, listener)
   }
 
-  static async new(workerData: any): Promise<OmniWorker> {
+  static new(workerData: any): Promise<OmniWorker> {
     return new Promise(async (resolve) => {
       const worker = new OmniWorker(
         isNodeEnv ? (await import("worker_threads")).Worker : Worker,
@@ -84,10 +84,10 @@ export class OmniWorker {
     })
   }
 
-  public async terminate(): Promise<void> {
+  public terminate() {
     if (!this.worker) return
     if (isNodeEnv) (this.worker as NodeWorker).unref()
-    await this.worker.terminate()
+    this.worker.terminate()
     this.worker = undefined
   }
 }

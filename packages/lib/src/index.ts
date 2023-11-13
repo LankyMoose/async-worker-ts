@@ -27,7 +27,7 @@ function createClient<const T extends IProcMap>(
       if (isCallable) {
         return Object.assign(acc, {
           [k]: (...args: any[]) =>
-            worker.call(p, map[k] instanceof Task, ...args),
+            worker.exec(p, map[k] instanceof Task, ...args),
         })
       }
 
@@ -40,9 +40,9 @@ function createClient<const T extends IProcMap>(
       concurrently: async <E>(
         fn: (worker: AsyncWorkerClient<T>) => Promise<E>
       ) => {
-        const w = createClient(map) as AsyncWorkerClient<T>
-        const res = await fn(w)
-        w.exit()
+        const client = createClient(map) as AsyncWorkerClient<T>
+        const res = await fn(client)
+        client.exit()
         return res
       },
     } as AsyncWorkerClient<T>

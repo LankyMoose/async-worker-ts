@@ -3,7 +3,7 @@ import type { WorkerMessage } from "./types"
 import {
   deserializeProcMap,
   getProc,
-  getProcMapScope,
+  getProcScope,
   createTaskScope,
 } from "./worker-shared.js"
 
@@ -28,7 +28,7 @@ if (!isMainThread && parentPort) {
           (event: string, handler: any) => addEventListener(event, handler)
         )
       : path.includes(".")
-      ? getProcMapScope(procMap, path)
+      ? getProcScope(procMap, path)
       : procMap
 
     try {
@@ -51,10 +51,11 @@ if (!isMainThread && parentPort) {
           const key =
             "next" in event ? "next" : "return" in event ? "return" : "throw"
 
-          const res = await generator[key](event[key])
+          const res = await (generator[key] as (...args: any) => any)(
+            ...(event[key] as any)
+          )
+          if (res.done) removeEventListener("message", handler)
           postMessage({ id, [key]: res.value, done: res.done })
-          if (key === "throw" || key === "return")
-            removeEventListener("message", handler)
         }
 
         addEventListener("message", handler)

@@ -7,6 +7,25 @@ const isNode =
   process.versions != null &&
   process.versions.node != null
 
+export function getProc(procMap: IProcMap, path: string) {
+  const keys = path.split(".") as string[]
+  let map = procMap as any
+
+  while (keys.length) {
+    const k = keys.shift()!
+    if (!map[k]) throw new Error(`No procedure found: "${path}"`)
+    map = map[k]
+    if (typeof map === "function") return map as { (...args: any): any }
+  }
+
+  throw new Error(`No procedure found: "${path}"`)
+}
+export function getProcScope(procMap: IProcMap, path: string) {
+  const keys = path.split(".")
+  keys.pop()
+  // @ts-ignore
+  return keys.reduce((acc, key) => acc[key], procMap) as IProcMap
+}
 export function createTaskScope(
   postMessage: (data: any) => void,
   removeListener: (event: string, handler: any) => void,
@@ -35,20 +54,6 @@ export function createTaskScope(
     throw error
   }
 }
-
-export function getProc(procMap: IProcMap, path: string) {
-  const keys = path.split(".") as string[]
-  let map = procMap as any
-
-  while (keys.length) {
-    const k = keys.shift()!
-    if (!map[k]) throw new Error(`No procedure found: "${path}"`)
-    map = map[k]
-    if (typeof map === "function") return map as { (...args: any): any }
-  }
-
-  throw new Error(`No procedure found: "${path}"`)
-}
 export function deserializeProcMap(procMap: ISerializedProcMap) {
   return Object.entries(procMap).reduce((acc, [key, value]) => {
     acc[key] =
@@ -56,20 +61,13 @@ export function deserializeProcMap(procMap: ISerializedProcMap) {
     return acc
   }, {} as IProcMap)
 }
-export function parseFunc(str: string): (...args: any[]) => any {
-  const transformed = transformFunc(str)
+
+function parseFunc(str: string): (...args: any[]) => any {
+  const transformed = ensureFuncHasName(str)
   return eval(`(${transformed})`)
 }
 
-function replaceIfStartsWith([str]: [string], search: string, replace: string) {
-  if (str.startsWith(search)) {
-    str = str.replace(search, replace)
-    return true
-  }
-  return false
-}
-
-export function transformFunc(str: string) {
+function ensureFuncHasName(str: string) {
   str = str.trim()
 
   const fn_name_internal = "___thunk___"
@@ -97,9 +95,10 @@ export function transformFunc(str: string) {
 
   return str
 }
-export function getProcMapScope(procMap: IProcMap, path: string) {
-  const keys = path.split(".")
-  keys.pop()
-  // @ts-ignore
-  return keys.reduce((acc, key) => acc[key], procMap) as IProcMap
+function replaceIfStartsWith([str]: [string], search: string, replace: string) {
+  if (str.startsWith(search)) {
+    str = str.replace(search, replace)
+    return true
+  }
+  return false
 }
