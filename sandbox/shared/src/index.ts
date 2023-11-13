@@ -5,23 +5,28 @@ export const settings = {
   ping_pong_iters: 10_000,
 }
 
+export async function* generatorTest(): AsyncGenerator<string> {
+  try {
+    const yieldInputA = yield "a"
+    console.log("generatorTest yield input", yieldInputA)
+    yield* ["a", "b", "c"] as any
+    yield "d"
+    yield "e"
+    return "f"
+  } catch (error) {
+    console.log("generatorTest caught er", error)
+    yield "g"
+    yield "h"
+  } finally {
+    console.log("generatorTest finally")
+    yield "i"
+    yield "j"
+    return "k"
+  }
+}
+
 export const worker = createWorkerClient({
-  generatorTest: async function* () {
-    try {
-      yield* [1, 2, 3, 4, 5]
-      yield 2
-      yield 3
-      yield 4
-      yield 69
-    } catch (error) {
-      console.log("generatorTest caught er", error)
-      //return 123
-      //yield 123
-    } finally {
-      console.log("generatorTest finally")
-      return "finally"
-    }
-  },
+  generatorTest,
   pingPong: task(async function () {
     while ((await this.emit("ping")) === "pong");
 

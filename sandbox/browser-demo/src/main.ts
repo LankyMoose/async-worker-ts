@@ -1,5 +1,5 @@
 import "./style.css"
-import { worker, settings } from "sandbox-shared"
+import { worker, settings, generatorTest } from "sandbox-shared"
 
 const appEl = document.getElementById("app")!
 
@@ -99,31 +99,30 @@ function createClapEl() {
   return el
 }
 
-async function generate() {
-  const gen = await worker.generatorTest()
-  // for await (const value of gen) {
-  //   console.log("generator value", value)
-  // }
-  //const last = await gen.next()
-  //console.log("last", last)
-  // console.log("gen", gen)
+async function testGenerator(gen: AsyncGenerator) {
   const nxt = await gen.next()
   console.log("nxt", nxt)
-  const err = await gen.throw(new Error("test"))
-  console.log("err", err)
+  // const err = await gen.throw(new Error("test"))
+  // console.log("err", err)
 
-  // const ret = await gen.return()
+  // const ret = await gen.return("main t return")
   // console.log("ret", ret)
-  // const nxt2 = await gen.next()
-  // console.log("nxt2", nxt2)
-  // const nxt3 = await gen.next()
-  // console.log("nxt3", nxt3)
-  // const nxt4 = await gen.next()
-  // console.log("nxt4", nxt4)
-  // const nxt5 = await gen.next()
-  // console.log("nxt5", nxt5)
-  // const nxt6 = await gen.next()
-  // console.log("nxt6", nxt6)
+  const nxt2 = await gen.next([4, 1])
+  console.log("nxt2", nxt2)
+  const nxt3 = await gen.next()
+  console.log("nxt3", nxt3)
+  const nxt4 = await gen.next()
+  console.log("nxt4", nxt4)
+  const nxt5 = await gen.next()
+  console.log("nxt5", nxt5)
+
+  for await (const val of gen) {
+    console.log("val", val)
+  }
 }
 
-generate()
+await testGenerator(await worker.generatorTest())
+
+console.log("_______________________________________________________")
+
+await testGenerator(generatorTest())
