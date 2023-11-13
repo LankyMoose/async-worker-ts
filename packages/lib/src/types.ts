@@ -46,7 +46,7 @@ type InferredClientProc<T> = T extends Task<infer Args, infer E>
       ? E
       : ProcedurePromise<InferredPromiseValue<E>>
   : T extends Func
-  ? (...args: Parameters<T>) => ProcedurePromise<ReturnType<T>>
+  ? (...args: Parameters<T>) => Promise<InferredPromiseValue<ReturnType<T>>>
   : T extends IProcMap
   ? {
       [K in keyof T]: InferredClientProc<T[K]>

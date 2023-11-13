@@ -1,5 +1,8 @@
 export class Task<const T extends readonly unknown[], U> {
-  constructor(private readonly fn: (this: Task<any, any>, ...args: T) => U) {}
+  #fn: (this: Task<any, any>, ...args: T) => U
+  constructor(fn: (this: Task<any, any>, ...args: T) => U) {
+    this.#fn = fn
+  }
 
   // @ts-ignore ts(6133) ts(2355)
   emit(event: string, data?: any): Promise<unknown> {
@@ -9,6 +12,6 @@ export class Task<const T extends readonly unknown[], U> {
   }
 
   static getTaskFn(task: Task<any, any>) {
-    return task.fn
+    return task.#fn
   }
 }

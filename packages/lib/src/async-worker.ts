@@ -1,25 +1,27 @@
 import { OmniWorker } from "./omniworker.js"
 import { Task } from "./task.js"
-import type { IProcMap, ISerializedProcMap, ProcedurePromise } from "./types.js"
+import type { IProcMap, ISerializedProcMap } from "./types.js"
 
 export class AsyncWorker {
-  private serializedProcMap: ISerializedProcMap
-  private worker: OmniWorker | undefined = undefined
-  private completionCallbacks: { [taskId: string]: (() => void)[] } = {}
+  #procMap: IProcMap
+  #serializedProcMap: ISerializedProcMap
+  #worker: OmniWorker | undefined = undefined
+  #completionCallbacks: { [taskId: string]: (() => void)[] } = {}
 
   constructor(procMap: IProcMap) {
-    this.serializedProcMap = this.serializeProcMap(procMap)
+    this.#procMap = procMap
+    this.#serializedProcMap = this.#serializeProcMap(procMap)
   }
 
   public exec(path: string, isTask: boolean, ...args: unknown[]) {
-    const taskId = crypto.randomUUID()
-    const wp = this.getWorker()
+    const id = crypto.randomUUID()
+    const wp = this.#getWorker()
 
     const promise = new Promise(async (resolve, reject) => {
       const worker = await wp
       const handler = (event: MessageEvent) => {
-        const { id, result, error, generator } = event.data
-        if (id !== taskId) return
+        const { id: resId, result, error, generator } = event.data
+        if (resId !== id) return
         if (
           !("result" in event.data) &&
           !("error" in event.data) &&
@@ -29,53 +31,53 @@ export class AsyncWorker {
 
         worker.removeEventListener("message", handler)
 
-        if (generator)
-          return resolve(this.createGenerator(worker, taskId, args))
+        if (generator) return resolve(this.createGenerator(worker, id, args))
 
-        this.onTaskComplete(taskId)
+        this.#onTaskComplete(id)
         return error ? reject(error) : resolve(result)
       }
       worker.addEventListener("message", handler)
-      worker.postMessage({ id: taskId, path, args, isTask })
-    }) as Partial<ProcedurePromise<unknown>>
+      worker.postMessage({ id, path, args, isTask })
+    })
 
-    return this.extendPromise(promise, wp, taskId)
+    if (this.#isTask(path)) return this.#extendPromise(promise, wp, id)
+    return promise
   }
 
   public exit() {
-    if (this.worker) this.worker.terminate()
-    this.worker = undefined
+    if (this.#worker) this.#worker.terminate()
+    this.#worker = undefined
   }
 
-  private extendPromise(
-    promise: Partial<ProcedurePromise<unknown>>,
+  #extendPromise(
+    promise: Promise<unknown>,
     wp: Promise<OmniWorker>,
     taskId: string
   ) {
     return Object.assign(promise, {
-      on: async (event: string, callback: (data?: any) => any) => {
+      on: (event: string, callback: (data?: any) => any) => {
         const emitHandler = async (e: MessageEvent) => {
           if (!("event" in e.data)) return
           const { id: msgId, event: taskEvent, data } = e.data
           if (taskEvent !== event) return
           const res = callback(data)
           if (res instanceof Promise) await res
-          wp.then(async (w) => w.postMessage({ id: msgId, data: res }))
+          wp.then((w) => w.postMessage({ id: msgId, data: res }))
         }
 
         wp.then((worker) => {
           worker.addEventListener("message", emitHandler)
-          if (!this.completionCallbacks[taskId])
-            this.completionCallbacks[taskId] = []
+          if (!this.#completionCallbacks[taskId])
+            this.#completionCallbacks[taskId] = []
 
-          this.completionCallbacks[taskId].push(() =>
+          this.#completionCallbacks[taskId].push(() =>
             worker.removeEventListener("message", emitHandler)
           )
         })
 
-        return promise as ProcedurePromise<unknown>
+        return promise
       },
-    }) as ProcedurePromise<unknown>
+    })
   }
 
   private createGenerator(
@@ -83,31 +85,24 @@ export class AsyncWorker {
     taskId: string,
     ...args: unknown[]
   ) {
-    const _this = this
+    const generateTx = this.#createGeneratorTx
     return Object.assign(
       (async function* (...next: any[]) {
         while (true) {
-          const { value, done } = await _this.createGeneratorTx(
-            worker,
-            taskId,
-            "next",
-            next
-          )
+          const { value, done } = await generateTx(worker, taskId, "next", next)
 
           if (done) return value
           next = yield value
         }
       })(...args),
       {
-        return: (value: any) =>
-          this.createGeneratorTx(worker, taskId, "return", value),
-        throw: (error: any) =>
-          this.createGeneratorTx(worker, taskId, "throw", error),
+        return: (value: any) => generateTx(worker, taskId, "return", value),
+        throw: (error: any) => generateTx(worker, taskId, "throw", error),
       }
     ) as AsyncGenerator<any, any, any>
   }
 
-  private createGeneratorTx(
+  #createGeneratorTx(
     worker: OmniWorker,
     taskId: string,
     key: string,
@@ -129,20 +124,20 @@ export class AsyncWorker {
     })
   }
 
-  private async getWorker() {
-    return (this.worker =
-      this.worker ?? (await OmniWorker.new(this.serializedProcMap)))
+  async #getWorker() {
+    return (this.#worker =
+      this.#worker ?? (await OmniWorker.new(this.#serializedProcMap)))
   }
 
-  private onTaskComplete(taskId: string) {
-    if (this.completionCallbacks[taskId]) {
-      this.completionCallbacks[taskId].forEach((cb) => cb())
-      delete this.completionCallbacks[taskId]
+  #onTaskComplete(taskId: string) {
+    if (this.#completionCallbacks[taskId]) {
+      this.#completionCallbacks[taskId].forEach((cb) => cb())
+      delete this.#completionCallbacks[taskId]
     }
     return true
   }
 
-  private serializeProcMap(map: IProcMap): ISerializedProcMap {
+  #serializeProcMap(map: IProcMap): ISerializedProcMap {
     return Object.entries(map).reduce(
       (acc, [key, value]) =>
         Object.assign(acc, {
@@ -151,9 +146,18 @@ export class AsyncWorker {
               ? value.toString()
               : value instanceof Task
               ? Task.getTaskFn(value).toString()
-              : this.serializeProcMap(value),
+              : this.#serializeProcMap(value),
         }),
       {}
     )
+  }
+
+  #isTask(path: string) {
+    const keys = path.split(".")
+    const last = keys.pop()!
+    // @ts-ignore
+    const scope = keys.reduce((acc, key) => acc[key], this.#procMap)
+    // @ts-ignore
+    return scope[last] instanceof Task
   }
 }
