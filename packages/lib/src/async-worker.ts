@@ -31,7 +31,7 @@ export class AsyncWorker {
 
         worker.removeEventListener("message", handler)
 
-        if (generator) return resolve(this.createGenerator(worker, id, args))
+        if (generator) return resolve(this.#createGenerator(worker, id, args))
 
         this.#onTaskComplete(id)
         return error ? reject(error) : resolve(result)
@@ -80,11 +80,7 @@ export class AsyncWorker {
     })
   }
 
-  private createGenerator(
-    worker: OmniWorker,
-    taskId: string,
-    ...args: unknown[]
-  ) {
+  #createGenerator(worker: OmniWorker, taskId: string, ...args: unknown[]) {
     const generateTx = this.#createGeneratorTx
     return Object.assign(
       (async function* (...next: any[]) {
