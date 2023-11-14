@@ -61,36 +61,31 @@ export class AsyncWorker {
     taskId: string
   ) {
     return Object.assign(promise, {
-      on: (event: string, callback: (data?: unknown) => unknown) => {
+      on: async (event: string, callback: (data?: unknown) => unknown) => {
+        const worker = await wp
         const emitHandler = async (e: MessageEvent) => {
           if (!("event" in e.data)) return
           const { id: msgId, event: taskEvent, data } = e.data
           if (taskEvent !== event) return
           const res = await callback(data)
-          if (this.#isTransferable(res)) {
-            return wp.then((w) =>
-              w.postMessage({ id: msgId, data: res }, [res])
-            )
-          } else if (Array.isArray(res)) {
-            return wp.then((w) =>
-              w.postMessage(
-                { id: msgId, data: res },
-                res.filter((r) => this.#isTransferable(r))
-              )
-            )
-          }
-          wp.then((w) => w.postMessage({ id: msgId, data: res }))
+
+          worker.postMessage(
+            { id: msgId, data: res },
+            (Array.isArray(res)
+              ? res.filter((r) => this.#isTransferable(r))
+              : this.#isTransferable(res)
+              ? [res]
+              : []) as Transferable[]
+          )
         }
 
-        wp.then((worker) => {
-          worker.addEventListener("message", emitHandler)
-          if (!this.#completionCallbacks[taskId])
-            this.#completionCallbacks[taskId] = []
+        worker.addEventListener("message", emitHandler)
+        if (!this.#completionCallbacks[taskId])
+          this.#completionCallbacks[taskId] = []
 
-          this.#completionCallbacks[taskId].push(() =>
-            worker.removeEventListener("message", emitHandler)
-          )
-        })
+        this.#completionCallbacks[taskId].push(() =>
+          worker.removeEventListener("message", emitHandler)
+        )
 
         return promise
       },
