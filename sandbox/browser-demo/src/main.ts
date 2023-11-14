@@ -2,14 +2,7 @@ import "./style.css"
 import { worker, settings } from "sandbox-shared"
 const appEl = document.getElementById("app")!
 
-const canvas = document.createElement("canvas")!
-document.body.appendChild(canvas)
-
-worker
-  .drawToCanvas(canvas.transferControlToOffscreen())
-  .on("continue", () => true)
-
-function addTaskButton(label: string, cb: () => void) {
+function createButton(label: string, cb: () => void) {
   return Object.assign(document.createElement("button"), {
     onclick: cb,
     textContent: label,
@@ -17,9 +10,10 @@ function addTaskButton(label: string, cb: () => void) {
 }
 
 appEl.append(
-  addTaskButton("Ping pong", () => playPingPong()),
-  addTaskButton("Calculate pi", () => calculatePi()),
-  addTaskButton("Slow clap", () => slowClap())
+  createButton("Ping pong", () => playPingPong()),
+  createButton("Calculate pi", () => calculatePi()),
+  createButton("Slow clap", () => slowClap()),
+  createButton("Offscreen canvas", () => offscreenCanvas())
 )
 
 const currentTasksEl = appEl.appendChild(document.createElement("ul"))
@@ -125,6 +119,15 @@ async function testGenerator(gen: AsyncGenerator) {
   for await (const val of gen) {
     console.log("val", val)
   }
+}
+
+function offscreenCanvas() {
+  const canvas = document.createElement("canvas")!
+  document.body.appendChild(canvas)
+
+  worker
+    .drawToCanvas(canvas.transferControlToOffscreen())
+    .on("continue", () => true)
 }
 
 // await testGenerator(await worker.generatorTest())
