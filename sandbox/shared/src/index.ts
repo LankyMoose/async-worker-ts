@@ -54,7 +54,6 @@ export const worker = createWorkerClient({
   drawToCanvas: task(async function (canvas: OffscreenCanvas) {
     const ctx = canvas.getContext("2d")!
     let startTime = Date.now()
-    let interval: number | NodeJS.Timeout
 
     const draw = async () => {
       const now = Date.now()
