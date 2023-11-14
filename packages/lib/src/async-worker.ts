@@ -55,13 +55,12 @@ export class AsyncWorker {
     taskId: string
   ) {
     return Object.assign(promise, {
-      on: (event: string, callback: (data?: any) => any) => {
+      on: (event: string, callback: (data?: unknown) => unknown) => {
         const emitHandler = async (e: MessageEvent) => {
           if (!("event" in e.data)) return
           const { id: msgId, event: taskEvent, data } = e.data
           if (taskEvent !== event) return
-          const res = callback(data)
-          if (res instanceof Promise) await res
+          const res = await callback(data)
           wp.then((w) => w.postMessage({ id: msgId, data: res }))
         }
 
@@ -83,7 +82,7 @@ export class AsyncWorker {
   #createGenerator(worker: OmniWorker, taskId: string, ...args: unknown[]) {
     const generateTx = this.#createGeneratorTx
     return Object.assign(
-      (async function* (...next: any[]) {
+      (async function* (...next: unknown[]) {
         while (true) {
           const { value, done } = await generateTx(worker, taskId, "next", next)
 
@@ -92,17 +91,17 @@ export class AsyncWorker {
         }
       })(...args),
       {
-        return: (value: any) => generateTx(worker, taskId, "return", value),
-        throw: (error: any) => generateTx(worker, taskId, "throw", error),
+        return: (value: unknown) => generateTx(worker, taskId, "return", value),
+        throw: (error: unknown) => generateTx(worker, taskId, "throw", error),
       }
-    ) as AsyncGenerator<any, any, any>
+    ) as AsyncGenerator<unknown, unknown, unknown>
   }
 
   #createGeneratorTx(
     worker: OmniWorker,
     taskId: string,
     key: string,
-    ...args: any[]
+    ...args: unknown[]
   ) {
     return new Promise<any>(async (res) => {
       const handler = (event: MessageEvent) => {
