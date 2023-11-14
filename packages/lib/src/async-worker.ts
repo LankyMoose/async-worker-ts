@@ -13,12 +13,11 @@ export class AsyncWorker {
     this.#serializedProcMap = this.#serializeProcMap(procMap)
   }
 
-  public exec(path: string, isTask: boolean, ...args: unknown[]) {
+  async exec(path: string, isTask: boolean, ...args: unknown[]) {
     const id = crypto.randomUUID()
-    const wp = this.#getWorker()
+    const worker = await this.#getWorker()
 
-    const promise = new Promise(async (resolve, reject) => {
-      const worker = await wp
+    const promise = new Promise((resolve, reject) => {
       const handler = (event: MessageEvent) => {
         const { id: resId, result, error, generator } = event.data
         if (resId !== id) return
@@ -40,18 +39,18 @@ export class AsyncWorker {
       worker.postMessage({ id, path, args, isTask })
     })
 
-    if (this.#isTask(path)) return this.#extendPromise(promise, wp, id)
+    if (this.#isTask(path)) return this.#extendPromise(promise, worker, id)
     return promise
   }
 
-  public exit() {
-    if (this.#worker) this.#worker.terminate()
+  async exit() {
+    await this.#worker?.terminate()
     this.#worker = undefined
   }
 
   #extendPromise(
     promise: Promise<unknown>,
-    wp: Promise<OmniWorker>,
+    worker: OmniWorker,
     taskId: string
   ) {
     return Object.assign(promise, {
@@ -61,18 +60,16 @@ export class AsyncWorker {
           const { id: msgId, event: taskEvent, data } = e.data
           if (taskEvent !== event) return
           const res = await callback(data)
-          wp.then((w) => w.postMessage({ id: msgId, data: res }))
+          worker.postMessage({ id: msgId, data: res })
         }
 
-        wp.then((worker) => {
-          worker.addEventListener("message", emitHandler)
-          if (!this.#completionCallbacks[taskId])
-            this.#completionCallbacks[taskId] = []
+        worker.addEventListener("message", emitHandler)
+        if (!this.#completionCallbacks[taskId])
+          this.#completionCallbacks[taskId] = []
 
-          this.#completionCallbacks[taskId].push(() =>
-            worker.removeEventListener("message", emitHandler)
-          )
-        })
+        this.#completionCallbacks[taskId].push(() =>
+          worker.removeEventListener("message", emitHandler)
+        )
 
         return promise
       },

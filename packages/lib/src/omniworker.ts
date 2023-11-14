@@ -84,10 +84,10 @@ export class OmniWorker {
     })
   }
 
-  public terminate() {
+  public async terminate() {
     if (!this.worker) return
     if (isNodeEnv) (this.worker as NodeWorker).unref()
-    this.worker.terminate()
+    await this.worker.terminate()
     this.worker = undefined
   }
 }
