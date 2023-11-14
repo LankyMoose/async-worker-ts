@@ -2,6 +2,8 @@ import { OmniWorker } from "./omniworker.js"
 import { Task } from "./task.js"
 import type { IProcMap, ISerializedProcMap } from "./types.js"
 
+var SharedArrayBuffer = globalThis.SharedArrayBuffer || ArrayBuffer // fallback for browsers that don't support SharedArrayBuffer
+
 export class AsyncWorker {
   #procMap: IProcMap
   #serializedProcMap: ISerializedProcMap
@@ -37,7 +39,11 @@ export class AsyncWorker {
         return error ? reject(error) : resolve(result)
       }
       worker.addEventListener("message", handler)
-      worker.postMessage({ id, path, args, isTask })
+
+      worker.postMessage(
+        { id, path, args, isTask },
+        args.filter((arg) => this.#isTransferable(arg)) as Transferable[]
+      )
     })
 
     if (this.#isTask(path)) return this.#extendPromise(promise, wp, id)
@@ -61,6 +67,18 @@ export class AsyncWorker {
           const { id: msgId, event: taskEvent, data } = e.data
           if (taskEvent !== event) return
           const res = await callback(data)
+          if (this.#isTransferable(res)) {
+            return wp.then((w) =>
+              w.postMessage({ id: msgId, data: res }, [res])
+            )
+          } else if (Array.isArray(res)) {
+            return wp.then((w) =>
+              w.postMessage(
+                { id: msgId, data: res },
+                res.filter((r) => this.#isTransferable(r))
+              )
+            )
+          }
           wp.then((w) => w.postMessage({ id: msgId, data: res }))
         }
 
@@ -144,6 +162,29 @@ export class AsyncWorker {
               : this.#serializeProcMap(value),
         }),
       {}
+    )
+  }
+
+  #isTransferable(value: unknown): value is Transferable {
+    return (
+      value instanceof ArrayBuffer ||
+      value instanceof MessagePort ||
+      value instanceof ImageBitmap ||
+      value instanceof OffscreenCanvas ||
+      value instanceof ImageData ||
+      value instanceof SharedArrayBuffer ||
+      value instanceof DataView ||
+      value instanceof Int8Array ||
+      value instanceof Uint8Array ||
+      value instanceof Uint8ClampedArray ||
+      value instanceof Int16Array ||
+      value instanceof Uint16Array ||
+      value instanceof Int32Array ||
+      value instanceof Uint32Array ||
+      value instanceof Float32Array ||
+      value instanceof Float64Array ||
+      value instanceof BigInt64Array ||
+      value instanceof BigUint64Array
     )
   }
 
