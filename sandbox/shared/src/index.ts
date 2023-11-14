@@ -51,4 +51,30 @@ export const worker = createWorkerClient({
       }, ms)
     })
   }),
+  drawToCanvas: task(async function (canvas: OffscreenCanvas) {
+    const ctx = canvas.getContext("2d")!
+    let startTime = Date.now()
+    let interval: number | NodeJS.Timeout
+
+    const draw = async () => {
+      const now = Date.now()
+      const dt = (now - startTime) / 1000
+
+      ctx.fillStyle = "black"
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      ctx.fillStyle = "white"
+      ctx.font = "48px serif"
+      ctx.fillText(`Time: ${dt.toFixed(2)}`, 10, 50)
+    }
+
+    const sleep = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms))
+
+    while (await this.emit("continue")) {
+      draw()
+      await sleep(1000 / 60)
+    }
+  }),
+  add: (a: number, b: number) => a + b,
 })

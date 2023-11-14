@@ -1,7 +1,13 @@
 import "./style.css"
-import { worker, settings, generatorTest } from "sandbox-shared"
-
+import { worker, settings } from "sandbox-shared"
 const appEl = document.getElementById("app")!
+
+const canvas = document.createElement("canvas")!
+document.body.appendChild(canvas)
+
+worker
+  .drawToCanvas(canvas.transferControlToOffscreen())
+  .on("continue", () => true)
 
 function addTaskButton(label: string, cb: () => void) {
   return Object.assign(document.createElement("button"), {
@@ -98,7 +104,7 @@ function createClapEl() {
 
   return el
 }
-
+// @ts-ignore
 async function testGenerator(gen: AsyncGenerator) {
   const nxt = await gen.next()
   console.log("nxt", nxt)
@@ -121,8 +127,8 @@ async function testGenerator(gen: AsyncGenerator) {
   }
 }
 
-await testGenerator(await worker.generatorTest())
+// await testGenerator(await worker.generatorTest())
 
-console.log("_______________________________________________________")
+// console.log("_______________________________________________________")
 
-await testGenerator(generatorTest())
+// await testGenerator(generatorTest())
