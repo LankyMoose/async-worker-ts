@@ -61,16 +61,16 @@ export class AsyncWorker {
     taskId: string
   ) {
     return Object.assign(promise, {
-      on: async (event: string, callback: (data?: unknown) => unknown) => {
+      on: async (evt: string, callback: (data?: unknown) => unknown) => {
         const worker = await wp
         const emitHandler = async (e: MessageEvent) => {
           if (!("event" in e.data)) return
-          const { id: msgId, event: taskEvent, data } = e.data
-          if (taskEvent !== event) return
+          const { id, mid, event, data } = e.data
+          if (id !== taskId || event !== evt) return
           const res = await callback(data)
 
           worker.postMessage(
-            { id: msgId, data: res },
+            { id, mid, data: res },
             (Array.isArray(res)
               ? res.filter((r) => this.#isTransferable(r))
               : this.#isTransferable(res)

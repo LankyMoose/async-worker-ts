@@ -23,6 +23,7 @@ if (!isMainThread && parentPort) {
 
     const scope = isTask
       ? createTaskScope(
+          id,
           postMessage,
           (event: string, handler: any) => removeEventListener(event, handler),
           (event: string, handler: any) => addEventListener(event, handler)

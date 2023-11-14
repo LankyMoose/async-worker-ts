@@ -27,6 +27,7 @@ export function getProcScope(procMap: IProcMap, path: string) {
   return keys.reduce((acc, key) => acc[key], procMap) as IProcMap
 }
 export function createTaskScope(
+  taskId: string,
   postMessage: (data: any) => void,
   removeListener: (event: string, handler: any) => void,
   addListener: (event: string, handler: any) => void
@@ -40,13 +41,13 @@ export function createTaskScope(
           const handler = async (event: MessageEvent) => {
             const d = isNode ? event : event.data
             if (!("data" in d)) return
-            const { id: responseId, data } = d
-            if (responseId !== msgId) return
+            const { id, mid, data } = d
+            if (id !== taskId || mid !== msgId) return
             removeListener("message", handler)
             resolve(data)
           }
           addListener("message", handler)
-          postMessage({ id: msgId, event, data })
+          postMessage({ id: taskId, mid: msgId, event, data })
         })
       },
     }
