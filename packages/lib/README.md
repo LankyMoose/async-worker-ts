@@ -44,7 +44,8 @@ import useWorker from "async-worker-ts"
 
 const worker = useWorker({
   /**
-   * NB; the 'this' keyword is available in procedures declared as anything but arrow functions and can be used to access other procedures.
+   * NB; the 'this' keyword is available in procedures declared as anything
+   * but arrow functions and can be used to access other procedures.
    */
   addRandomNumbers: function () {
     const a = this.randomNumber()
@@ -113,6 +114,27 @@ for (let i = 0; i < 4; i++) {
 ```
 
 <br />
+
+## Transferables:
+
+```ts
+import useWorker, { transfer } from "async-worker-ts"
+
+const worker = useWorker({
+  drawToCanvas: (OffscreenCanvas) => {
+    // ... do things with the canvas here as if we were on the main thread
+  },
+})
+const canvas = document.createElement("canvas")
+const offscreenCvs = canvas.transferControlToOffscreen()
+
+/**
+ * By passing the argument through the 'transfer' function, we flag it as an
+ * transferable. This is the equivalent of calling 'postMessage' with the
+ * second argument being an array containing the argument.
+ */
+worker.drawToCanvas(transfer(offscreenCvs))
+```
 
 # God help your CPU. 🙏
 
