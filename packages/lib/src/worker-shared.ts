@@ -32,27 +32,23 @@ export function createTaskScope(
   removeListener: (event: string, handler: any) => void,
   addListener: (event: string, handler: any) => void
 ) {
-  try {
-    return {
-      emit: (event: string, data: any) => {
-        const msgId = crypto.randomUUID()
+  return {
+    emit: (event: string, data: any) => {
+      const msgId = crypto.randomUUID()
 
-        return new Promise((resolve) => {
-          const handler = async (event: MessageEvent) => {
-            const d = isNode ? event : event.data
-            if (!("data" in d)) return
-            const { id, mid, data } = d
-            if (id !== taskId || mid !== msgId) return
-            removeListener("message", handler)
-            resolve(data)
-          }
-          addListener("message", handler)
-          postMessage({ id: taskId, mid: msgId, event, data })
-        })
-      },
-    }
-  } catch (error) {
-    throw error
+      return new Promise((resolve) => {
+        const handler = async (event: MessageEvent) => {
+          const d = isNode ? event : event.data
+          if (!("data" in d)) return
+          const { id, mid, data } = d
+          if (id !== taskId || mid !== msgId) return
+          removeListener("message", handler)
+          resolve(data)
+        }
+        addListener("message", handler)
+        postMessage({ id: taskId, mid: msgId, event, data })
+      })
+    },
   }
 }
 export function deserializeProcMap(procMap: ISerializedProcMap) {
