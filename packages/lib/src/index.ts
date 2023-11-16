@@ -1,6 +1,7 @@
 import { AsyncWorker } from "./async-worker.js"
 import { Task } from "./task.js"
-import { IProcMap, AsyncWorkerClient } from "./types.js"
+import { AWTTransferable } from "./transferable.js"
+import { IProcMap, AsyncWorkerClient, AnyTransferable } from "./types.js"
 
 export default function <const T extends IProcMap>(procMap: T) {
   return createClient<T>(procMap)
@@ -10,6 +11,10 @@ export function task<const T extends readonly unknown[], U>(
   fn: (this: Task<any, any>, ...args: T) => U
 ): Task<T, U> {
   return new Task(fn)
+}
+
+export function transfer<T extends AnyTransferable>(value: T) {
+  return new AWTTransferable(value)
 }
 
 function createClient<const T extends IProcMap>(

@@ -1,8 +1,7 @@
 import { OmniWorker } from "./omniworker.js"
 import { Task } from "./task.js"
+import { AWTTransferable } from "./transferable.js"
 import type { IProcMap, ISerializedProcMap } from "./types.js"
-
-var SharedArrayBuffer = globalThis.SharedArrayBuffer || ArrayBuffer // fallback for browsers that don't support SharedArrayBuffer
 
 export class AsyncWorker {
   #procMap: IProcMap
@@ -40,10 +39,18 @@ export class AsyncWorker {
       }
       worker.addEventListener("message", handler)
 
-      worker.postMessage(
-        { id, path, args, isTask },
-        args.filter((arg) => this.#isTransferable(arg)) as Transferable[]
+      const transferables = [] as Transferable[]
+      const _args = args.map((arg) =>
+        arg instanceof AWTTransferable
+          ? (() => {
+              const val = AWTTransferable.getTransferableValue(arg)
+              transferables.push(val)
+              return val
+            })()
+          : arg
       )
+
+      worker.postMessage({ id, path, args: _args, isTask }, transferables)
     })
 
     if (this.#isTask(path)) return this.#extendPromise(promise, wp, id)
@@ -67,16 +74,32 @@ export class AsyncWorker {
           if (!("event" in e.data)) return
           const { id, mid, event, data } = e.data
           if (id !== taskId || event !== evt) return
-          const res = await callback(data)
+          const cbRes = await callback(data)
+          let _data
+          const transferables = []
 
-          worker.postMessage(
-            { id, mid, data: res },
-            (Array.isArray(res)
-              ? res.filter((r) => this.#isTransferable(r))
-              : this.#isTransferable(res)
-              ? [res]
-              : []) as Transferable[]
-          )
+          if (cbRes !== undefined) {
+            if (Array.isArray(cbRes)) {
+              _data = cbRes.map((item) =>
+                item instanceof AWTTransferable
+                  ? (() => {
+                      const val = AWTTransferable.getTransferableValue(item)
+                      transferables.push(val)
+                      return val
+                    })()
+                  : item
+              )
+            } else {
+              _data = cbRes
+              if (cbRes instanceof AWTTransferable) {
+                const val = AWTTransferable.getTransferableValue(cbRes)
+                transferables.push(val)
+                _data = val
+              }
+            }
+          }
+
+          worker.postMessage({ id, mid, data: _data }, transferables)
         }
 
         worker.addEventListener("message", emitHandler)
@@ -157,29 +180,6 @@ export class AsyncWorker {
               : this.#serializeProcMap(value),
         }),
       {}
-    )
-  }
-
-  #isTransferable(value: unknown): value is Transferable {
-    return (
-      value instanceof ArrayBuffer ||
-      value instanceof MessagePort ||
-      value instanceof ImageBitmap ||
-      value instanceof OffscreenCanvas ||
-      value instanceof ImageData ||
-      value instanceof SharedArrayBuffer ||
-      value instanceof DataView ||
-      value instanceof Int8Array ||
-      value instanceof Uint8Array ||
-      value instanceof Uint8ClampedArray ||
-      value instanceof Int16Array ||
-      value instanceof Uint16Array ||
-      value instanceof Int32Array ||
-      value instanceof Uint32Array ||
-      value instanceof Float32Array ||
-      value instanceof Float64Array ||
-      value instanceof BigInt64Array ||
-      value instanceof BigUint64Array
     )
   }
 

@@ -1,7 +1,33 @@
-import { Task } from "./task"
+import type { Task } from "./task"
+import type { FileHandle } from "node:fs/promises"
+import type { AWTTransferable } from "./transferable"
+import type { X509Certificate } from "node:crypto"
 
 type Func = (...args: any[]) => any
 type InferredPromiseValue<T> = T extends Promise<infer U> ? U : T
+type AWTParameters<Arr extends readonly unknown[]> = Arr extends readonly []
+  ? []
+  : Arr extends readonly [infer Head, ...infer Tail]
+  ? [
+      Head extends AnyTransferable ? AWTTransferable<Head> : Head,
+      ...AWTParameters<Tail>
+    ]
+  : Arr
+
+export type AnyTransferable =
+  | OffscreenCanvas
+  | ImageBitmap
+  | MessagePort
+  | ReadableStream
+  | WritableStream
+  | TransformStream
+  | VideoFrame
+  | ArrayBuffer
+  | ArrayBuffer
+  | MessagePort
+  | FileHandle
+  | X509Certificate
+  | Blob
 
 export interface IProcMap {
   [key: string]: Func | Task<readonly unknown[], any> | IProcMap
@@ -18,11 +44,11 @@ export type AsyncWorkerClient<T extends IProcMap> = {
   exit: () => Promise<void>
 }
 
-export type ProcedurePromise<T> = Promise<T> & {
+export type TaskPromise<T> = Promise<T> & {
   on: (
     event: string,
     callback: (data?: any) => unknown
-  ) => ProcedurePromise<InferredPromiseValue<T>>
+  ) => TaskPromise<InferredPromiseValue<T>>
 }
 
 export type WorkerMessage = {
@@ -41,12 +67,12 @@ export type WorkerMessage = {
 
 type InferredClientProc<T> = T extends Task<infer Args, infer E>
   ? (
-      ...args: Args
-    ) => E extends ProcedurePromise<any>
-      ? E
-      : ProcedurePromise<InferredPromiseValue<E>>
+      ...args: AWTParameters<Args>
+    ) => E extends TaskPromise<any> ? E : TaskPromise<InferredPromiseValue<E>>
   : T extends Func
-  ? (...args: Parameters<T>) => Promise<InferredPromiseValue<ReturnType<T>>>
+  ? (
+      ...args: AWTParameters<Parameters<T>>
+    ) => Promise<InferredPromiseValue<ReturnType<T>>>
   : T extends IProcMap
   ? {
       [K in keyof T]: InferredClientProc<T[K]>
