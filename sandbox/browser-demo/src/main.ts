@@ -1,3 +1,4 @@
+import { transfer } from "async-worker-ts"
 import "./style.css"
 import { worker, settings } from "sandbox-shared"
 const appEl = document.getElementById("app")!
@@ -13,7 +14,9 @@ appEl.append(
   createButton("Ping pong", () => playPingPong()),
   createButton("Calculate pi", () => calculatePi()),
   createButton("Slow clap", () => slowClap()),
-  createButton("Offscreen canvas", () => offscreenCanvas())
+  createButton("Offscreen canvas", () => offscreenCanvas()),
+  createButton("Doubler", () => doDoublerTest()),
+  createButton("Doubler chunked", () => doDoublerTest(true))
 )
 
 const currentTasksEl = appEl.appendChild(document.createElement("ul"))
@@ -124,10 +127,57 @@ async function testGenerator(gen: AsyncGenerator) {
 function offscreenCanvas() {
   const canvas = document.createElement("canvas")!
   document.body.appendChild(canvas)
+  const offscreenCvs = canvas.transferControlToOffscreen()
 
-  worker
-    .drawToCanvas(canvas.transferControlToOffscreen())
-    .on("continue", () => true)
+  worker.drawToCanvas(transfer(offscreenCvs)).on("continue", () => true)
+}
+
+async function doubler(length: number) {
+  const list = Array.from({ length }, (_, i) => i + 1) as number[]
+  const start = performance.now()
+
+  await worker.doubleItems(list)
+
+  return performance.now() - start
+}
+
+async function doubler_chunked(length: number, numThreads: number) {
+  const chunkSize = length / numThreads
+
+  const list = Array.from({ length }, () => 1) as number[]
+  const start = performance.now()
+
+  await Promise.all(
+    Array.from({ length: length / chunkSize }, (_, i) =>
+      worker.concurrently((w) =>
+        w.doubleItems(list.slice(i * chunkSize, (i + 1) * chunkSize))
+      )
+    )
+  )
+
+  return performance.now() - start
+}
+
+async function doDoublerTest(chunked = false) {
+  const iterations = 10
+  const durations = []
+  const arrSize = 4_000_000
+  const numThreads = 4
+
+  for (let i = 0; i < iterations; i++) {
+    const duration = await (chunked
+      ? doubler_chunked(arrSize, numThreads)
+      : doubler(arrSize))
+    durations.push(duration)
+  }
+  const shortest = Math.min(...durations)
+  const average = durations.reduce((a, b) => a + b) / durations.length
+  console.table({
+    iterations,
+    ["shortest (ms)"]: Math.floor(shortest),
+    ["average (ms)"]: Math.floor(average),
+    chunked,
+  })
 }
 
 // await testGenerator(await worker.generatorTest())

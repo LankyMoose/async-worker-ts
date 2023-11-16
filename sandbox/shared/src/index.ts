@@ -32,7 +32,6 @@ export const worker = createWorkerClient({
 
     return 123
   }),
-
   calculatePi: task(function (iterations: number) {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
@@ -75,5 +74,5 @@ export const worker = createWorkerClient({
       await sleep(1000 / 60)
     }
   }),
-  add: (a: number, b: number) => a + b,
+  doubleItems: (items: number[]) => items.map((i) => i * 2),
 })
