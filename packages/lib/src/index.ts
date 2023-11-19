@@ -24,7 +24,7 @@ function createClient<const T extends IProcMap>(
 ): AsyncWorkerClient<T> {
   return Object.entries(map).reduce(
     (acc, [k]) => {
-      if (k === "exit") return acc
+      if (path === "" && (k === "exit" || k === "concurrently")) return acc
 
       const p = path ? path + "." + k : k
       const isTask = map[k] instanceof Task
