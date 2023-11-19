@@ -27,12 +27,11 @@ function createClient<const T extends IProcMap>(
       if (k === "exit") return acc
 
       const p = path ? path + "." + k : k
-
-      const isCallable = map[k] instanceof Task || typeof map[k] === "function"
+      const isTask = map[k] instanceof Task
+      const isCallable = isTask || typeof map[k] === "function"
       if (isCallable) {
         return Object.assign(acc, {
-          [k]: (...args: any[]) =>
-            worker.exec(p, map[k] instanceof Task, ...args),
+          [k]: (...args: any[]) => worker.exec(p, isTask, ...args),
         })
       }
 
@@ -40,16 +39,18 @@ function createClient<const T extends IProcMap>(
         [k]: createClient(map[k] as IProcMap, worker, p),
       })
     },
-    {
-      exit: () => worker.exit(),
-      concurrently: async <E>(
-        fn: (worker: AsyncWorkerClient<T>) => Promise<E>
-      ) => {
-        const client = createClient(map) as AsyncWorkerClient<T>
-        const res = await fn(client)
-        client.exit()
-        return res
-      },
-    } as AsyncWorkerClient<T>
+    (path === ""
+      ? {
+          exit: () => worker.exit(),
+          concurrently: async <E>(
+            fn: (worker: AsyncWorkerClient<T>) => Promise<E>
+          ) => {
+            const client = createClient(map) as AsyncWorkerClient<T>
+            const res = await fn(client)
+            client.exit()
+            return res
+          },
+        }
+      : {}) as AsyncWorkerClient<T>
   )
 }
