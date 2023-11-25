@@ -5,7 +5,7 @@
 ## Features
 
 - **Asynchronous Workers:** Easily create and run asynchronous workers in TypeScript.
-- **Concurrency:** Execute multiple workers concurrently to improve performance.
+- **True multithreading:** Execute procedures in multiple threads simultaneously to improve performance.
 - **Promise-based API:** Simple and intuitive API based on Promises for easy integration.
 
 ## Installation
@@ -15,11 +15,12 @@ Install the package using npm:
 ```bash
 npm install async-worker-ts
 ```
-or
-```bash
-yarn add async-worker-ts
-```
 
+or
+
+```bash
+pnpm add async-worker-ts
+```
 
 ```ts
 import createWorker, { task } from "async-worker-ts"
@@ -151,6 +152,50 @@ const offscreenCvs = canvas.transferControlToOffscreen()
 worker.drawToCanvas(transfer(offscreenCvs))
 ```
 
+<br />
+
+## Dynamic imports and module resolution:
+
+#### _Importing modules requires a bundler for module resolution because procedures are serialized and executed in a different scope, rendering relative paths useless. I created <a href="https://www.npmjs.com/package/">awt-bundler</a> as a simple bundler for using this package with Node._
+
+_someModule.ts:_
+
+```ts
+export const someFunction = () => {
+  // ...
+}
+```
+
+_myWorker.ts:_
+
+```ts
+import useWorker, { AWTClientBuilder } from "async-worker-ts"
+
+const worker = useWorker({
+  doSomething: async () => {
+    const { someFunction } = await import("./someModule.ts")
+    return someFunction()
+  },
+})
+
+// or:
+
+const workerWithCachedImports = new AWTClientBuilder()
+  .withImportCache(async () => {
+    const { someFunction } = await import("./someModule.js")
+    return { someFunction }
+  })
+  .build(function ({ someFunction }) {
+    return {
+      doSomething: () => {
+        return someFunction()
+      },
+    }
+  })
+```
+
+<br />
+
 # God help your CPU. 🙏
 
 <p align="center">
@@ -158,9 +203,10 @@ worker.drawToCanvas(transfer(offscreenCvs))
 
 </p>
 
-
 ### Contributing
+
 We welcome contributions from the community. To contribute to async-worker-ts, please follow our contribution guidelines.
 
 ### License
+
 This package is licensed under the GNUV3 License - see the `LICENSE` file for details.

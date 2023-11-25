@@ -176,6 +176,8 @@ const workerWithCachedImports = new AWTClientBuilder()
   })
 ```
 
+<br />
+
 # God help your CPU. 🙏
 
 <p align="center">
