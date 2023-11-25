@@ -163,4 +163,4 @@ worker.drawToCanvas(transfer(offscreenCvs))
 We welcome contributions from the community. To contribute to async-worker-ts, please follow our contribution guidelines.
 
 ### License
-This package is licensed under the ISC License - see the `LICENSE` file for details.
+This package is licensed under the GNUV3 License - see the `LICENSE` file for details.
