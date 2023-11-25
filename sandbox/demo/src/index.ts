@@ -12,13 +12,8 @@ function playPingPong() {
 
 //playPingPong()
 
-worker.concurrently(async (w) => {
-  const gen = await w.generatorTest()
-  for await (let i of gen) {
-    console.log(i)
-  }
-})
-
+await worker.dependancyTest()
+worker.exit()
 // const gen = await worker.generatorTest()
 
 // for await (let i of gen) {

@@ -58,7 +58,7 @@ export type WorkerMessage = {
   path: string
   args: unknown[]
   // identifies a task, as opposed to a procedure - tasks have a uniquely bound scope.
-  isTask?: boolean
+  isTask: boolean
   // generator proxied events
   next?: unknown
   return?: unknown

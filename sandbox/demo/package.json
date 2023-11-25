@@ -5,9 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\"",
-    "build": "tsc",
-    "dev": "tsc && node dist/index.js"
+    "bundle": "awt-bundler dist",
+    "build": "tsc && pnpm bundle",
+    "dev": "pnpm build && node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +17,7 @@
     "sandbox-shared": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.8.10"
+    "@types/node": "^20.8.10",
+    "awt-bundler": "workspace:^"
   }
 }

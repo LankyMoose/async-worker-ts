@@ -1,31 +1,16 @@
-import createWorkerClient, { task } from "async-worker-ts"
+import createClient, { task } from "async-worker-ts"
 
 export const settings = {
   pi_iters: 100_000_000,
   ping_pong_iters: 10_000,
 }
 
-export async function* generatorTest(): AsyncGenerator<string> {
-  try {
-    const yieldInputA = yield "a"
-    console.log("generatorTest yield input", yieldInputA)
-    yield* ["a", "b", "c"] as any
-    yield "d"
-    yield "e"
-    return "f"
-  } catch (error) {
-    console.log("generatorTest caught er", error)
-    yield "g"
-    yield "h"
-  } finally {
-    console.log("generatorTest finally")
-    yield "i"
-    yield "j"
-    return "k"
-  }
-}
-
-export const worker = createWorkerClient({
+export const worker = createClient({
+  dependancyTest: task(async function () {
+    debugger
+    const { test } = await import("./test.js")
+    console.log("dependancyTest", test())
+  }),
   generatorTest,
   pingPong: task(async function () {
     while ((await this.emit("ping")) === "pong");
@@ -76,3 +61,22 @@ export const worker = createWorkerClient({
   }),
   doubleItems: (items: number[]) => items.map((i) => i * 2),
 })
+export async function* generatorTest(): AsyncGenerator<string> {
+  try {
+    const yieldInputA = yield "a"
+    console.log("generatorTest yield input", yieldInputA)
+    yield* ["a", "b", "c"] as any
+    yield "d"
+    yield "e"
+    return "f"
+  } catch (error) {
+    console.log("generatorTest caught er", error)
+    yield "g"
+    yield "h"
+  } finally {
+    console.log("generatorTest finally")
+    yield "i"
+    yield "j"
+    return "k"
+  }
+}

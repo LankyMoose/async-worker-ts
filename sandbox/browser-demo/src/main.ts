@@ -1,6 +1,9 @@
 import { transfer } from "async-worker-ts"
 import "./style.css"
 import { worker, settings } from "sandbox-shared"
+
+worker.dependancyTest()
+
 const appEl = document.getElementById("app")!
 
 function createButton(label: string, cb: () => void) {
