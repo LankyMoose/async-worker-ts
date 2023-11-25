@@ -136,6 +136,46 @@ const offscreenCvs = canvas.transferControlToOffscreen()
 worker.drawToCanvas(transfer(offscreenCvs))
 ```
 
+## Dynamic imports and module resolution:
+
+#### _Importing modules requires a bundler for module resolution because procedures are serialized and executed in a different scope, rendering relative paths useless. I created <a href="https://www.npmjs.com/package/">awt-bundler</a> as a simple bundler for using this package with Node._
+
+_someModule.ts:_
+
+```ts
+export const someFunction = () => {
+  // ...
+}
+```
+
+_myWorker.ts:_
+
+```ts
+import useWorker, { AWTClientBuilder } from "async-worker-ts"
+
+const worker = useWorker({
+  doSomething: async () => {
+    const { someFunction } = await import("./someModule.ts")
+    return someFunction()
+  },
+})
+
+// or:
+
+const workerWithCachedImports = new AWTClientBuilder()
+  .withImportCache(async () => {
+    const { someFunction } = await import("./someModule.js")
+    return { someFunction }
+  })
+  .build(function ({ someFunction }) {
+    return {
+      doSomething: () => {
+        return someFunction()
+      },
+    }
+  })
+```
+
 # God help your CPU. 🙏
 
 <p align="center">
