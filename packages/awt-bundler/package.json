@@ -10,7 +10,7 @@
     "async-worker-ts"
   ],
   "author": "Robby6Strings",
-  "license": "ISC",
+  "license": "GNUV3",
   "bin": "./dist/index.js",
   "devDependencies": {
     "@types/node": "^20.8.10"
