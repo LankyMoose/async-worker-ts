@@ -1,16 +1,35 @@
-import createClient, { task } from "async-worker-ts"
+import createClient, { task, AWTClientBuilder } from "async-worker-ts"
 
 export const settings = {
   pi_iters: 100_000_000,
   ping_pong_iters: 10_000,
 }
 
-export const worker = createClient({
-  dependancyTest: task(async function () {
-    debugger
+export const builderWorker = new AWTClientBuilder()
+  .withImportCache(async () => {
     const { test } = await import("./test.js")
-    console.log("dependancyTest", test())
-  }),
+    return { test }
+  })
+  .build(function ({ test }) {
+    return {
+      taskTest: task(async () => 123),
+      foo: async () => {
+        return test()
+      },
+      bar: function () {
+        return this.foo()
+      },
+      a: {
+        asd: () => 123,
+      },
+    }
+  })
+
+export const worker = createClient({
+  dependancyTest: async function () {
+    const { test } = await import("./test.js")
+    return test()
+  },
   generatorTest,
   pingPong: task(async function () {
     while ((await this.emit("ping")) === "pong");
@@ -61,6 +80,7 @@ export const worker = createClient({
   }),
   doubleItems: (items: number[]) => items.map((i) => i * 2),
 })
+
 export async function* generatorTest(): AsyncGenerator<string> {
   try {
     const yieldInputA = yield "a"

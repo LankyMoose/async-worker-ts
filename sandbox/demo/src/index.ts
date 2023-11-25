@@ -1,4 +1,7 @@
-import { settings, worker } from "sandbox-shared"
+import { builderWorker, settings, worker } from "sandbox-shared"
+
+const foo = await builderWorker.foo()
+console.log("foo", foo)
 
 function playPingPong() {
   return worker.concurrently(async (w) => {
