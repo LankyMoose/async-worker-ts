@@ -1,10 +1,5 @@
 import type { IProcMap, WorkerMessage } from "./types"
-import {
-  deserializeProcMap,
-  getProc,
-  getProcScope,
-  createTaskScope,
-} from "./worker-shared.js"
+import { deserializeProcMap, getProc, getScope } from "./worker-shared.js"
 
 let didInit = false
 let procMap: IProcMap = {}
@@ -21,16 +16,15 @@ onmessage = async (e) => {
   if (!("path" in e.data)) return
   const { id, path, args, isTask } = e.data as WorkerMessage
 
-  const scope = isTask
-    ? createTaskScope(
-        id,
-        postMessage,
-        (event: string, handler: any) => removeEventListener(event, handler),
-        (event: string, handler: any) => addEventListener(event, handler)
-      )
-    : path.includes(".")
-    ? getProcScope(procMap, path)
-    : procMap
+  const scope = getScope({
+    id,
+    isTask,
+    postMessage,
+    removeEventListener,
+    addEventListener,
+    procMap,
+    path,
+  })
 
   try {
     const fn = getProc(procMap, path)

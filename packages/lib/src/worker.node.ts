@@ -1,11 +1,6 @@
 import { isMainThread, workerData, parentPort } from "node:worker_threads"
 import type { WorkerMessage } from "./types"
-import {
-  deserializeProcMap,
-  getProc,
-  getProcScope,
-  createTaskScope,
-} from "./worker-shared.js"
+import { deserializeProcMap, getProc, getScope } from "./worker-shared.js"
 
 if (!isMainThread && parentPort) {
   if (!workerData) throw new Error("workerData not provided")
@@ -21,16 +16,15 @@ if (!isMainThread && parentPort) {
     if (!("path" in e)) return
     const { id, path, args, isTask } = e
 
-    const scope = isTask
-      ? createTaskScope(
-          id,
-          postMessage,
-          (event: string, handler: any) => removeEventListener(event, handler),
-          (event: string, handler: any) => addEventListener(event, handler)
-        )
-      : path.includes(".")
-      ? getProcScope(procMap, path)
-      : procMap
+    const scope = getScope({
+      id,
+      isTask,
+      postMessage,
+      removeEventListener,
+      addEventListener,
+      procMap,
+      path,
+    })
 
     try {
       const fn = getProc(procMap, path)
