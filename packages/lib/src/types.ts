@@ -33,6 +33,11 @@ export interface IProcMap {
   [key: string]: Func | Task<readonly unknown[], any> | IProcMap
 }
 
+export type BuilderConfig<D extends Record<string, any> = {}> = {
+  depsLoader: () => Promise<D>
+  pmFn: (deps: D) => Record<string, any>
+}
+
 export interface ISerializedProcMap {
   [key: string]: string | ISerializedProcMap
 }
@@ -65,7 +70,7 @@ export type WorkerMessage = {
   throw?: unknown
 }
 
-type InferredClientProc<T> = T extends Task<infer Args, infer E>
+export type InferredClientProc<T> = T extends Task<infer Args, infer E>
   ? (
       ...args: AWTParameters<Args>
     ) => E extends TaskPromise<any> ? E : TaskPromise<InferredPromiseValue<E>>

@@ -4,7 +4,13 @@ import { deserializeProcMap, getProc, getScope } from "./worker-shared.js"
 
 if (!isMainThread && parentPort) {
   if (!workerData) throw new Error("workerData not provided")
-  const procMap = deserializeProcMap(workerData)
+  Object.assign(globalThis, {
+    task(fn: (...args: any[]) => any) {
+      return fn
+    },
+  })
+
+  const procMap = await deserializeProcMap(workerData)
 
   const postMessage = (data: any) => parentPort?.postMessage({ data })
   const addEventListener = (event: string, handler: any) =>

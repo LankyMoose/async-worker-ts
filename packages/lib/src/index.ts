@@ -1,7 +1,38 @@
 import { AsyncWorker } from "./async-worker.js"
+import { builderSymbol } from "./constants.js"
 import { Task } from "./task.js"
 import { AWTTransferable } from "./transferable.js"
-import { IProcMap, AsyncWorkerClient, AnyTransferable } from "./types.js"
+import {
+  IProcMap,
+  AsyncWorkerClient,
+  AnyTransferable,
+  BuilderConfig,
+} from "./types.js"
+
+export class AWTClientBuilder<D extends Record<string, any> = {}> {
+  // @ts-ignore
+  #depsLoader?: () => Promise<D>
+  withImportCache<T extends Record<string, any>>(depsLoader: () => Promise<T>) {
+    this.#depsLoader = depsLoader as any as () => Promise<D>
+    return {
+      build: this.build.bind(this),
+    } as Omit<AWTClientBuilder<T & D>, "withImportCache">
+  }
+  build<T extends Record<string, any>>(
+    pmFn: (deps: D) => T
+  ): AsyncWorkerClient<T> {
+    // @ts-ignore
+    const pm = pmFn({} as D) as T
+    return createClient(
+      Object.assign(pm, {
+        [builderSymbol]: {
+          depsLoader: this.#depsLoader,
+          pmFn,
+        } as BuilderConfig<D>,
+      })
+    )
+  }
+}
 
 export default function <const T extends IProcMap>(procMap: T) {
   return createClient<T>(procMap)

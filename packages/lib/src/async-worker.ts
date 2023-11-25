@@ -1,17 +1,21 @@
+import { builderSymbol } from "./constants.js"
 import { OmniWorker } from "./omniworker.js"
 import { Task } from "./task.js"
 import { AWTTransferable } from "./transferable.js"
-import type { IProcMap, ISerializedProcMap } from "./types.js"
+import type { BuilderConfig, IProcMap, ISerializedProcMap } from "./types.js"
 
 export class AsyncWorker {
   #procMap: IProcMap
   #serializedProcMap: ISerializedProcMap
+  #builderConfig?: BuilderConfig
   #worker: OmniWorker | undefined = undefined
   #completionCallbacks: { [taskId: string]: (() => void)[] } = {}
 
   constructor(procMap: IProcMap) {
     this.#procMap = procMap
     this.#serializedProcMap = this.#serializeProcMap(procMap)
+    if (builderSymbol in procMap)
+      this.#builderConfig = procMap[builderSymbol] as BuilderConfig
   }
 
   exec(path: string, isTask: boolean, ...args: unknown[]) {
@@ -157,7 +161,19 @@ export class AsyncWorker {
 
   async #getWorker() {
     return (this.#worker =
-      this.#worker ?? (await OmniWorker.new(this.#serializedProcMap)))
+      this.#worker ??
+      (await OmniWorker.new(
+        this.#builderConfig
+          ? {
+              builderConfig: {
+                depsLoader: this.#builderConfig.depsLoader.toString(),
+                pmFn: this.#builderConfig.pmFn.toString(),
+              },
+            }
+          : {
+              procMap: this.#serializedProcMap,
+            }
+      )))
   }
 
   #onTaskComplete(taskId: string) {

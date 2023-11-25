@@ -77,12 +77,29 @@ function createTaskScope(
     },
   }
 }
-export function deserializeProcMap(procMap: ISerializedProcMap) {
-  return Object.entries(procMap).reduce((acc, [key, value]) => {
-    acc[key] =
-      typeof value === "string" ? parseFunc(value) : deserializeProcMap(value)
-    return acc
-  }, {} as IProcMap)
+export async function deserializeProcMap(data: Record<string, any>) {
+  if ("procMap" in data) {
+    return Object.entries(data.procMap as ISerializedProcMap).reduce(
+      (acc, [key, value]) => {
+        // @ts-ignore
+        acc[key] =
+          typeof value === "string"
+            ? parseFunc(value)
+            : deserializeProcMap(value)
+        return acc
+      },
+      {} as IProcMap
+    )
+  } else if ("builderConfig" in data) {
+    const { depsLoader, pmFn } = Object.fromEntries(
+      Object.entries(data.builderConfig).map(([key, value]) => [
+        key,
+        new Function(`return ${value}`)(),
+      ])
+    )
+    const deps = await depsLoader()
+    return pmFn(deps)
+  }
 }
 
 function parseFunc(str: string): (...args: any[]) => any {

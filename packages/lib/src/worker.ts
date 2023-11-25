@@ -4,10 +4,16 @@ import { deserializeProcMap, getProc, getScope } from "./worker-shared.js"
 let didInit = false
 let procMap: IProcMap = {}
 
+Object.assign(globalThis, {
+  task(fn: (...args: any[]) => any) {
+    return fn
+  },
+})
+
 onmessage = async (e) => {
   if (!e.data) return
   if (!didInit) {
-    procMap = deserializeProcMap(e.data)
+    procMap = await deserializeProcMap(e.data)
     didInit = true
     postMessage("initialized")
     return
