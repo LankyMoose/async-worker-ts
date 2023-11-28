@@ -24,10 +24,7 @@ async function build() {
    */
   const [workersBundle, bundle] = await Promise.all([
     rollup({
-      input: [
-        path.resolve(packageDir, "worker.js"),
-        path.resolve(packageDir, "worker.node.js"),
-      ],
+      input: [path.resolve(packageDir, "worker.js")],
       plugins: [nodeResolve(), commonjs()],
     }),
     rollup({

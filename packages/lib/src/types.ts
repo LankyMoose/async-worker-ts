@@ -33,11 +33,6 @@ export interface IProcMap {
   [key: string]: Func | Task<readonly unknown[], any> | IProcMap
 }
 
-export type BuilderConfig<D extends Record<string, any> = {}> = {
-  depsLoader: () => Promise<D>
-  pmFn: (deps: D) => Record<string, any>
-}
-
 export interface ISerializedProcMap {
   [key: string]: string | ISerializedProcMap
 }

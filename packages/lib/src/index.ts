@@ -1,41 +1,29 @@
 import { AsyncWorker } from "./async-worker.js"
-import { builderSymbol } from "./constants.js"
 import { Task } from "./task.js"
 import { AWTTransferable } from "./transferable.js"
-import {
-  IProcMap,
-  AsyncWorkerClient,
-  AnyTransferable,
-  BuilderConfig,
-} from "./types.js"
+import { IProcMap, AsyncWorkerClient, AnyTransferable } from "./types.js"
+import { setProcMap } from "./worker.js"
 
-export class AWTClientBuilder<D extends Record<string, any> = {}> {
-  // @ts-ignore
-  #depsLoader?: () => Promise<D>
-  withImportCache<T extends Record<string, any>>(depsLoader: () => Promise<T>) {
-    this.#depsLoader = depsLoader as any as () => Promise<D>
-    return {
-      build: this.build.bind(this),
-    } as Omit<AWTClientBuilder<T & D>, "withImportCache">
-  }
-  build<T extends Record<string, any>>(
-    pmFn: (deps: D) => T
-  ): AsyncWorkerClient<T> {
-    // @ts-ignore
-    const pm = pmFn({} as D) as T
-    return createClient(
-      Object.assign(pm, {
-        [builderSymbol]: {
-          depsLoader: this.#depsLoader,
-          pmFn,
-        } as BuilderConfig<D>,
-      })
-    )
-  }
+const isNode =
+  typeof process !== "undefined" &&
+  process.versions != null &&
+  process.versions.node != null
+
+let isMainThread = false
+if (isNode) {
+  const { isMainThread: mt } = await import("node:worker_threads")
+  isMainThread = mt
 }
 
-export default function <const T extends IProcMap>(procMap: T) {
-  return createClient<T>(procMap)
+export default function <const T extends IProcMap>(
+  procMap: T
+): AsyncWorkerClient<T> {
+  const [_, id] = arguments
+  if (!id && isNode && !isMainThread) {
+    setProcMap(procMap)
+    return {} as AsyncWorkerClient<T>
+  }
+  return createClient<T>(procMap, new AsyncWorker(procMap, id), "", id)
 }
 
 export function task<const T extends readonly unknown[], U>(
@@ -50,8 +38,9 @@ export function transfer<T extends AnyTransferable>(value: T) {
 
 function createClient<const T extends IProcMap>(
   map: IProcMap,
-  worker = new AsyncWorker(map),
-  path = ""
+  worker: AsyncWorker,
+  path: string,
+  id: string
 ): AsyncWorkerClient<T> {
   return Object.entries(map).reduce(
     (acc, [k]) => {
@@ -67,7 +56,7 @@ function createClient<const T extends IProcMap>(
       }
 
       return Object.assign(acc, {
-        [k]: createClient(map[k] as IProcMap, worker, p),
+        [k]: createClient(map[k] as IProcMap, worker, p, id),
       })
     },
     (path === ""
@@ -76,7 +65,12 @@ function createClient<const T extends IProcMap>(
           concurrently: async <E>(
             fn: (worker: AsyncWorkerClient<T>) => Promise<E>
           ) => {
-            const client = createClient(map) as AsyncWorkerClient<T>
+            const client = createClient(
+              map,
+              new AsyncWorker(map, id),
+              "",
+              id
+            ) as AsyncWorkerClient<T>
             const res = await fn(client)
             client.exit()
             return res

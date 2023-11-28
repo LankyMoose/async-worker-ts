@@ -1,21 +1,21 @@
-import { builderSymbol } from "./constants.js"
 import { OmniWorker } from "./omniworker.js"
 import { Task } from "./task.js"
 import { AWTTransferable } from "./transferable.js"
-import type { BuilderConfig, IProcMap, ISerializedProcMap } from "./types.js"
+import type { IProcMap, ISerializedProcMap } from "./types.js"
+
+const isNode = typeof process !== "undefined" && process?.versions?.node
 
 export class AsyncWorker {
+  #id: string
   #procMap: IProcMap
   #serializedProcMap: ISerializedProcMap
-  #builderConfig?: BuilderConfig
   #worker: OmniWorker | undefined = undefined
   #completionCallbacks: { [taskId: string]: (() => void)[] } = {}
 
-  constructor(procMap: IProcMap) {
+  constructor(procMap: IProcMap, id: string) {
     this.#procMap = procMap
     this.#serializedProcMap = this.#serializeProcMap(procMap)
-    if (builderSymbol in procMap)
-      this.#builderConfig = procMap[builderSymbol] as BuilderConfig
+    this.#id = id
   }
 
   exec(path: string, isTask: boolean, ...args: unknown[]) {
@@ -25,13 +25,10 @@ export class AsyncWorker {
     const promise = new Promise(async (resolve, reject) => {
       const worker = await wp
       const handler = (event: MessageEvent) => {
-        const { id: resId, result, error, generator } = event.data
+        const data = isNode ? event : event.data
+        const { id: resId, result, error, generator } = data
         if (resId !== id) return
-        if (
-          !("result" in event.data) &&
-          !("error" in event.data) &&
-          !("generator" in event.data)
-        )
+        if (!("result" in data) && !("error" in data) && !("generator" in data))
           return
 
         worker.removeEventListener("message", handler)
@@ -75,8 +72,9 @@ export class AsyncWorker {
       on: async (evt: string, callback: (data?: unknown) => unknown) => {
         const worker = await wp
         const emitHandler = async (e: MessageEvent) => {
-          if (!("event" in e.data)) return
-          const { id, mid, event, data } = e.data
+          const msgData = isNode ? e : e.data
+          if (!("event" in msgData)) return
+          const { id, mid, event, data } = msgData
           if (id !== taskId || event !== evt) return
           const cbRes = await callback(data)
           let _data
@@ -145,8 +143,9 @@ export class AsyncWorker {
   ) {
     return new Promise<any>(async (res) => {
       const handler = (event: MessageEvent) => {
-        if (!(key in event.data)) return
-        const { id: responseId, [key]: value, done } = event.data
+        const data = isNode ? event : event.data
+        if (!(key in data)) return
+        const { id: responseId, [key]: value, done } = data
 
         if (responseId !== taskId) return
         worker.removeEventListener("message", handler)
@@ -161,19 +160,7 @@ export class AsyncWorker {
 
   async #getWorker() {
     return (this.#worker =
-      this.#worker ??
-      (await OmniWorker.new(
-        this.#builderConfig
-          ? {
-              builderConfig: {
-                depsLoader: this.#builderConfig.depsLoader.toString(),
-                pmFn: this.#builderConfig.pmFn.toString(),
-              },
-            }
-          : {
-              procMap: this.#serializedProcMap,
-            }
-      )))
+      this.#worker ?? (await OmniWorker.new(this.#serializedProcMap, this.#id)))
   }
 
   #onTaskComplete(taskId: string) {
