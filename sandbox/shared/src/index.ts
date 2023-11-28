@@ -1,14 +1,13 @@
-import createClient, { task } from "async-worker-ts"
+import { task } from "async-worker-ts"
 
 export const settings = {
   pi_iters: 100_000_000,
   ping_pong_iters: 10_000,
 }
 
-export const worker = createClient({
+export const procMap = {
   dependancyTest: async function () {
-    const { test } = await import("./test.js")
-    return test()
+    //return test()
   },
   generatorTest,
   pingPong: task(async function () {
@@ -59,7 +58,7 @@ export const worker = createClient({
     }
   }),
   doubleItems: (items: number[]) => items.map((i) => i * 2),
-})
+}
 
 export async function* generatorTest(): AsyncGenerator<string> {
   try {

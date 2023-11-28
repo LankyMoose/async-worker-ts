@@ -1,6 +1,13 @@
 import { transfer } from "async-worker-ts"
 import "./style.css"
-import { worker, settings } from "sandbox-shared"
+import { settings } from "sandbox-shared"
+import worker from "./myWorker.worker.js"
+
+const gen = await worker.generatorTest()
+for await (let i of gen) {
+  console.log(i)
+}
+await worker.exit()
 
 const appEl = document.getElementById("app")!
 

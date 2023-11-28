@@ -1,4 +1,5 @@
-import { settings, worker } from "sandbox-shared"
+import { settings } from "sandbox-shared"
+import worker from "./myWorker.worker.js"
 
 function playPingPong() {
   return worker.concurrently(async (w) => {
@@ -10,13 +11,15 @@ function playPingPong() {
   })
 }
 
-//playPingPong()
+await playPingPong()
 
 const depTest = await worker.dependancyTest()
 console.log("depTest", depTest)
-worker.exit()
-// const gen = await worker.generatorTest()
 
-// for await (let i of gen) {
-//   console.log(i)
-// }
+const gen = await worker.generatorTest()
+
+for await (let i of gen) {
+  console.log(i)
+}
+
+worker.exit()

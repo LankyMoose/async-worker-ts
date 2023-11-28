@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && awt-bundler dist",
+    "build": "tsc",
     "dev": "pnpm build && node dist/index.js"
   },
   "keywords": [],
@@ -16,7 +16,6 @@
     "sandbox-shared": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.8.10",
-    "awt-bundler": "workspace:^"
+    "@types/node": "^20.8.10"
   }
 }
