@@ -1,7 +1,4 @@
-import { builderWorker, settings, worker } from "sandbox-shared"
-
-const foo = await builderWorker.foo()
-console.log("foo", foo)
+import { settings, worker } from "sandbox-shared"
 
 function playPingPong() {
   return worker.concurrently(async (w) => {
@@ -15,7 +12,8 @@ function playPingPong() {
 
 //playPingPong()
 
-await worker.dependancyTest()
+const depTest = await worker.dependancyTest()
+console.log("depTest", depTest)
 worker.exit()
 // const gen = await worker.generatorTest()
 

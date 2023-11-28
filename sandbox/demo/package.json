@@ -5,8 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "bundle": "awt-bundler dist",
-    "build": "tsc && pnpm bundle",
+    "build": "tsc && awt-bundler dist",
     "dev": "pnpm build && node dist/index.js"
   },
   "keywords": [],

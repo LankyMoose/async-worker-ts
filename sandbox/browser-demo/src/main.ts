@@ -1,8 +1,6 @@
 import { transfer } from "async-worker-ts"
 import "./style.css"
-import { worker, settings, builderWorker } from "sandbox-shared"
-const foo = await builderWorker.foo()
-console.log("foo", foo)
+import { worker, settings } from "sandbox-shared"
 
 const appEl = document.getElementById("app")!
 
