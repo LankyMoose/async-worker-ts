@@ -5,6 +5,8 @@ async function main() {
   console.log(thing1)
   const thing2 = await thingWorker.doTheOtherThing()
   console.log(thing2)
+  const thing3 = await thingWorker.doAnotherThing(1)
+  console.log(thing3)
   await thingWorker.exit()
 }
 

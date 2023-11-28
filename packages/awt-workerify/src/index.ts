@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path"
 import fs from "node:fs/promises"
-import esbuild, { type BuildOptions } from "esbuild"
+import esbuild, { TransformOptions, type BuildOptions } from "esbuild"
 import { gen } from "./codegen.js"
 import { log, log_err } from "./logger.js"
 
@@ -25,27 +25,51 @@ const distPath = path.resolve(cwd, _dist)
 // if entry path is a file, use its directory - otherwise use the entry path
 const dir = path.extname(_path) ? path.dirname(entryPath) : entryPath
 
+const tsconfig = path.join(cwd, "tsconfig.json")
+// check if tsconfig exists
+const exists = await fs.stat(tsconfig).catch(() => false)
+const tsconfigRaw = exists ? await fs.readFile(tsconfig, "utf8") : "{}"
+
 const buildOptions: BuildOptions = {
   bundle: true,
   minify: true,
   format: "esm",
   target: "esnext",
   platform: "node",
+  tsconfig,
+  loader: { ".js": "js", ".ts": "ts" },
   allowOverwrite: true,
   define: { ...envVars },
 }
 
 async function buildWorker(_path: string) {
-  const fName = path.basename(_path)
-  const dir = path.dirname(_path)
-  const outfile = path.join(distPath, fName.replace(".ts", ".js"))
-  const src = await fs.readFile(_path, "utf8")
+  let src = await fs.readFile(_path, "utf8")
+  if (!src) throw new Error("no source")
+  if (_path.endsWith(".ts")) {
+    const res = await esbuild.transform(src, {
+      sourcefile: _path,
+      format: "esm",
+      loader: "ts",
+      platform: !!process.argv.find(
+        (arg) => arg === "--browser" || arg === "-b"
+      )
+        ? "node"
+        : "browser",
+      tsconfigRaw,
+    } as TransformOptions)
+    src = res.code
+  }
+
   const codeGenRes = gen(src, _path)
+  const dir = path.dirname(_path)
 
   await fs.writeFile(
     path.join(dir, codeGenRes.id + ".client.js"),
     codeGenRes.client
   )
+
+  const fName = path.basename(_path)
+  const outfile = path.join(distPath, fName.replace(".ts", ".js"))
 
   await Promise.all([
     esbuild.build({

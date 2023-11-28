@@ -1,20 +1,12 @@
 import esprima from "esprima"
 import escodegen from "escodegen"
-import type {
-  Node as EsNode,
-  SimpleCallExpression,
-  VariableDeclaration,
-} from "estree"
+import type { Node as EsNode } from "estree"
 
-function traverse(
-  node: EsNode,
-  state = {
-    importName: "",
-    exportDefaultName: "",
-    varDecs: [] as VariableDeclaration[],
-    path: "",
-  }
-): SimpleCallExpression | null {
+type traverseState = {
+  importName: string
+  didAddArg: boolean
+}
+function traverse(node: EsNode, id: string, state: traverseState): void {
   if (
     node.type === "ImportDeclaration" &&
     node.source.value === "async-worker-ts"
@@ -30,14 +22,19 @@ function traverse(
   if (node.type === "VariableDeclaration") {
     for (const dec of node.declarations) {
       if (dec.type === "VariableDeclarator") {
-        const expr = dec.init
-        if (expr && expr.type === "CallExpression") {
-          const { callee } = expr
+        const init = dec.init
+        if (init && init.type === "CallExpression") {
+          const { callee } = init
           if (
             callee.type === "Identifier" &&
             callee.name === state.importName
           ) {
-            state.varDecs.push(node)
+            if (init.arguments.length === 1) {
+              state.didAddArg = !!init.arguments.push({
+                type: "Literal",
+                value: id,
+              })
+            }
           }
         }
       }
@@ -50,35 +47,22 @@ function traverse(
       node.declaration.callee.type === "Identifier" &&
       node.declaration.callee.name === state.importName
     ) {
-      return node.declaration
-    }
-
-    if (node.declaration.type === "Identifier") {
-      const identifierName = node.declaration.name
-      for (const v of state.varDecs) {
-        const declarator = v.declarations.find(
-          (d) =>
-            d.id.type === "Identifier" &&
-            d.id.name === identifierName &&
-            d.init?.type === "CallExpression" &&
-            d.init.callee.type === "Identifier" &&
-            d.init.callee.name === state.importName
-        )
-        if (declarator && declarator.init) {
-          return declarator.init as SimpleCallExpression
-        }
+      if (node.declaration.arguments.length === 1) {
+        state.didAddArg = !!node.declaration.arguments.push({
+          type: "Literal",
+          value: id,
+        })
+        return
       }
     }
   }
 
   for (const n of Object.keys(node) as (keyof typeof node)[]) {
     const nk = node[n]
-    if (nk && typeof nk === "object") {
-      const _n = traverse(nk as any as EsNode, state)
-      if (_n) return _n
+    if (!!nk && typeof nk === "object") {
+      traverse(nk as any as EsNode, id, state)
     }
   }
-  return null
 }
 
 function createHash(str: string) {
@@ -101,18 +85,15 @@ export function gen(
   id: string
   client: string
 } {
-  const ast = esprima.parseModule(code)
-  const clientCreationCall = traverse(ast)
-  if (!clientCreationCall) {
-    throw new Error("No valid default export found in " + path)
-  }
-  // generate a hash of the code to use as the worker id
   const id = createHash(path + code).toString(36)
+  const ast = esprima.parseModule(code)
+  const state = { importName: "", didAddArg: false }
 
-  clientCreationCall.arguments.push({
-    type: "Literal",
-    value: id,
-  })
+  traverse(ast, id, state)
+
+  if (!state.didAddArg) {
+    throw new Error(`could not find async-worker-ts import in ${path}`)
+  }
 
   return {
     id,
