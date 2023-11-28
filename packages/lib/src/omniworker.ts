@@ -11,12 +11,13 @@ export class OmniWorker {
   private worker: (Worker | NodeWorker) | undefined = undefined
 
   constructor(
+    id: string,
     ctor: WorkerCtor | NodeWorkerCtor,
     workerData: any,
     maxListeners: number = 256
   ) {
     this.worker = new ctor(
-      new URL(isNodeEnv ? "./worker.node.js" : "./worker.js", import.meta.url),
+      new URL(id ? `./${id}.awt.js` : "./worker.js", import.meta.url),
       {
         workerData,
         type: "module",
@@ -64,9 +65,10 @@ export class OmniWorker {
     ;(this.worker as Worker).removeEventListener(event, listener)
   }
 
-  static new(workerData: any): Promise<OmniWorker> {
+  static new(workerData: any, id: string): Promise<OmniWorker> {
     return new Promise(async (resolve) => {
       const worker = new OmniWorker(
+        id,
         isNodeEnv ? (await import("worker_threads")).Worker : Worker,
         workerData
       )
