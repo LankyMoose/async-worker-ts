@@ -1,0 +1,28 @@
+{
+  "name": "awt-workerify",
+  "version": "1.0.0",
+  "description": "🔱 A custom bundler for use with async-worker-ts",
+  "main": "dist/index.js",
+  "type": "module",
+  "keywords": [
+    "bundler",
+    "rollup",
+    "async-worker-ts"
+  ],
+  "author": "Robby6Strings",
+  "license": "GNUV3",
+  "bin": "./dist/index.js",
+  "devDependencies": {
+    "@types/escodegen": "^0.0.10",
+    "@types/esprima": "^4.0.6",
+    "@types/estraverse": "^5.1.7",
+    "@types/estree": "^1.0.5",
+    "@types/node": "^20.8.10"
+  },
+  "dependencies": {
+    "esbuild": "^0.19.8",
+    "escodegen": "^2.1.0",
+    "esprima": "^4.0.1",
+    "estraverse": "^5.3.0"
+  }
+}
