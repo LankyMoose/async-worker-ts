@@ -10,7 +10,7 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "noEmit": false,
-    "declaration": false,
+    "declaration": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,

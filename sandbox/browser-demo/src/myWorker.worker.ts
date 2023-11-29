@@ -1,4 +1,13 @@
 import { procMap } from "sandbox-shared"
 import createWorker from "async-worker-ts"
 
-export default createWorker(procMap)
+const num = 123
+
+const pm = Object.assign<typeof procMap, { teeest: () => number }>(procMap, {
+  teeest: () => {
+    console.log("teeest")
+    return num
+  },
+})
+
+export default createWorker(pm)

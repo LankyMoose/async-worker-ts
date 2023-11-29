@@ -16,6 +16,7 @@ export class OmniWorker {
     workerData: any,
     maxListeners: number = 256
   ) {
+    //console.log("OmniWorker ctor", id, import.meta.url, workerData)
     this.worker = new ctor(
       new URL(id ? `./${id}.awt.js` : "./worker.js", import.meta.url),
       {

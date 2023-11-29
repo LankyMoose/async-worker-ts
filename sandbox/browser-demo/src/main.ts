@@ -3,6 +3,8 @@ import "./style.css"
 import { settings } from "sandbox-shared"
 import worker from "./myWorker.worker.js"
 
+//await worker.teeest()
+
 const gen = await worker.generatorTest()
 for await (let i of gen) {
   console.log(i)
