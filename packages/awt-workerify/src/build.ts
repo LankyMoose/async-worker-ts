@@ -3,7 +3,7 @@ import path from "node:path"
 import fs from "node:fs/promises"
 import esbuild, { TransformOptions, type BuildOptions } from "esbuild"
 import { gen } from "./codegen.js"
-import { log } from "./logger.js"
+import { log, log_pref } from "./logger.js"
 
 const envVars = {
   "process.env.NODE_ENV": !!process.argv.find((arg) => arg === "--prod")
@@ -12,17 +12,9 @@ const envVars = {
 }
 
 const cwd = process.cwd()
-// const packageDir = path.resolve(
-//   cwd,
-//   path.join("node_modules", "async-worker-ts", "dist")
-// )
-
-// if entry path is a file, use its directory - otherwise use the entry path
-
 const tsconfig = path.join(cwd, "tsconfig.json")
-// check if tsconfig exists
-const exists = await fs.stat(tsconfig).catch(() => false)
-const tsconfigRaw = exists ? await fs.readFile(tsconfig, "utf8") : "{}"
+const tscfgExists = await fs.stat(tsconfig).catch(() => false)
+const tsconfigRaw = tscfgExists ? await fs.readFile(tsconfig, "utf8") : "{}"
 
 const buildOptions: BuildOptions = {
   bundle: true,
@@ -36,47 +28,48 @@ const buildOptions: BuildOptions = {
   define: { ...envVars },
 }
 
-async function buildWorker(_path: string, distPath: string) {
-  let src = await fs.readFile(_path, "utf8")
-  if (!src) throw new Error("no source")
+async function buildWorker(srcFilePath: string, distPath: string) {
+  let src = await fs.readFile(srcFilePath, "utf8")
+  if (!src) throw new Error(`${log_pref}could not read file: ${srcFilePath}`)
+  // transform the source to js, esm
   const res = await esbuild.transform(src, {
-    sourcefile: _path,
+    sourcefile: srcFilePath,
     format: "esm",
     loader: "ts",
-    platform: !!process.argv.find((arg) => arg === "--browser" || arg === "-b")
-      ? "node"
-      : "browser",
+    platform: "node",
     tsconfigRaw,
   } as TransformOptions)
   src = res.code
 
-  const codeGenRes = gen(src, _path)
-  const dir = path.dirname(_path)
+  // generate the client code
+  const { id, code } = gen(src, srcFilePath)
+  const dir = path.dirname(srcFilePath)
 
-  await fs.writeFile(
-    path.join(dir, codeGenRes.id + ".client.js"),
-    codeGenRes.client
-  )
+  // write the client code to a temp file to use with esbuild
+  await fs.writeFile(path.join(dir, id + ".temp.awt.js"), code)
 
-  const fName = path.basename(_path)
+  const fName = path.basename(srcFilePath)
   const outfile = path.join(distPath, fName.replace(".ts", ".js"))
 
   await Promise.all([
+    // build the client code
     esbuild.build({
       ...buildOptions,
-      entryPoints: [path.join(dir, codeGenRes.id + ".client.js")],
+      entryPoints: [path.join(dir, id + ".temp.awt.js")],
       outfile,
     }),
+    // build the worker code
     esbuild.build({
       ...buildOptions,
-      entryPoints: [_path],
-      outfile: path.join(distPath, codeGenRes.id + ".awt.js"),
+      entryPoints: [srcFilePath],
+      outfile: path.join(distPath, id + ".awt.js"),
     }),
   ])
 
-  await fs.unlink(path.join(dir, codeGenRes.id + ".client.js"))
+  // delete the temp file
+  await fs.unlink(path.join(dir, id + ".temp.awt.js"))
 
-  return codeGenRes.id
+  return id
 }
 
 async function build_recursive(
@@ -101,15 +94,10 @@ async function build_recursive(
 }
 
 export async function build(srcPath: string, distPath: string) {
-  // await esbuild.build({
-  //   ...buildOptions,
-  //   entryPoints: [path.resolve(packageDir, "worker.js")],
-  //   outdir: distPath,
-  // })
-
   const ids: string[] = await build_recursive(srcPath, distPath)
 
-  // recurse through the dist directory and delete all the files that end in .worker.js
+  // recurse through the dist directory and
+  // delete all the files that end in .awt.js
   // if the file name is not in the ids array
   await deleteOldBuilds(ids, distPath)
 

@@ -83,7 +83,7 @@ export function gen(
   path: string
 ): {
   id: string
-  client: string
+  code: string
 } {
   const id = createHash(path + code).toString(36)
   const ast = esprima.parseModule(code)
@@ -97,6 +97,6 @@ export function gen(
 
   return {
     id,
-    client: escodegen.generate(ast),
+    code: escodegen.generate(ast),
   }
 }

@@ -29,12 +29,12 @@ const formats = {
 
 type FormatKey = keyof typeof formats
 
-const pref = "awt-workerify: "
+export const log_pref = "awt-workerify: "
 
 export function log(format: FormatKey, ...data: unknown[]) {
-  console.log(formats[format] + "%s" + formats["Reset"], pref, ...data)
+  console.log(formats[format] + "%s" + formats["Reset"], log_pref, ...data)
 }
 
 export function log_err(format: FormatKey, ...data: unknown[]) {
-  console.error(formats[format] + "%s" + formats["Reset"], pref, ...data)
+  console.error(formats[format] + "%s" + formats["Reset"], log_pref, ...data)
 }
