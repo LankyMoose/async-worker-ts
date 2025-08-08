@@ -11,19 +11,14 @@ export class OmniWorker {
   private worker: (Worker | NodeWorker) | undefined = undefined
 
   constructor(
-    id: string,
     ctor: WorkerCtor | NodeWorkerCtor,
     workerData: any,
     maxListeners: number = 256
   ) {
-    //console.log("OmniWorker ctor", id, import.meta.url, workerData)
-    this.worker = new ctor(
-      new URL(id ? `./${id}.awt.js` : "./worker.js", import.meta.url),
-      {
-        workerData,
-        type: "module",
-      }
-    )
+    this.worker = new ctor(new URL("./worker.js", import.meta.url), {
+      workerData,
+      type: "module",
+    })
     if (isNodeEnv) (this.worker as NodeWorker).setMaxListeners(maxListeners)
   }
 
@@ -66,10 +61,9 @@ export class OmniWorker {
     ;(this.worker as Worker).removeEventListener(event, listener)
   }
 
-  static new(workerData: any, id: string): Promise<OmniWorker> {
+  static new(workerData: any): Promise<OmniWorker> {
     return new Promise(async (resolve) => {
       const worker = new OmniWorker(
-        id,
         isNodeEnv ? (await import("worker_threads")).Worker : Worker,
         workerData
       )
@@ -88,6 +82,7 @@ export class OmniWorker {
   }
 
   public async terminate() {
+    console.log("called worker.terminate()", this.worker)
     if (!this.worker) return
     if (isNodeEnv) (this.worker as NodeWorker).unref()
     await this.worker.terminate()

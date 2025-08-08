@@ -138,70 +138,7 @@ worker.drawToCanvas(transfer(offscreenCvs))
 
 <br />
 
-## Advaced Usage (with bundler support):
-
-I created <b><a href="https://www.npmjs.com/package/awt-workerify">awt-workerify</a></b> for this package to enable the power of easy-to-write, easy-to-reason-about workers. It's really simple! By using the very popular <b><a href="https://www.npmjs.com/package/esbuild">esbuild</a></b> package to bundle our worker scripts and their dependencies into a single file, and <b><a href="https://www.npmjs.com/package/esprima">esprima</a></b> for a little bit of code generation magic, we can
-
-- <b>use the same esm import syntax</b> we're used to in regular javascript, and without the need for dynamic imports (except when you want to, of course!)
-- <b>make use of the parent scope</b> _(i.e. the scope in which the worker is created)_ to access variables and functions
-
-<br />
-
-_someModule.ts:_
-
-```ts
-export const add = (...values: number[]) => {
-  return values.reduce((a, b) => a + b, 0)
-}
-```
-
-_myWorker.<b>worker</b>.ts:_
-
-<small>(note the <b>.worker</b> extension - this allows the bundler to discover the file and generate a companion script)</small>
-
-```ts
-import createWorker from "async-worker-ts"
-import { add } from "./someModule.js"
-
-const multiplier = 2
-
-const worker = createWorker({
-  doSomething: () => {
-    return add(6, 7, 8) * multiplier
-  },
-})
-
-export default worker
-```
-
-_main.ts:_
-
-```ts
-import worker from "./myWorker.worker.js"
-
-worker.doSomething().then(console.log) // 42
-```
-
-_package.json:_
-
-```json
-{
-  "scripts": {
-    "build": "tsc && awt-workerify src dist",
-    "dev": "pnpm build && node dist/main.js"
-  },
-  "dependencies": {
-    "async-worker-ts": "*"
-  },
-  "devDependencies": {
-    "awt-workerify": "*"
-  }
-}
-```
-
-<br />
-
-# God help your CPU 😀
+# That's it! God help your CPU 😀
 
 <p align="center">
   <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZmc4dm1zazE4OXpmcWxtcXByOWp1a3F5cGJicTc1eHZvYTBvZXQxOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbtDDSvWErdf2/giphy.gif" alt="Richard Ayoade using async-worker-ts" />

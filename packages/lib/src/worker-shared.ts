@@ -1,7 +1,5 @@
 import { IProcMap, ISerializedProcMap } from "./types"
 
-export const AWT_DEBUG_GENERATED_SRC = false
-
 const isNode =
   typeof process !== "undefined" &&
   process.versions != null &&

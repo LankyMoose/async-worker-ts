@@ -18,12 +18,11 @@ if (isNode) {
 export default function <const T extends IProcMap>(
   procMap: T
 ): AsyncWorkerClient<T> {
-  const [_, id] = arguments
-  if (!id && isNode && !isMainThread) {
+  if (isNode && !isMainThread) {
     setProcMap(procMap)
     return {} as AsyncWorkerClient<T>
   }
-  return createClient<T>(procMap, new AsyncWorker(procMap, id), "", id)
+  return createClient<T>(procMap)
 }
 
 export function task<const T extends readonly unknown[], U>(
@@ -37,45 +36,44 @@ export function transfer<T extends AnyTransferable>(value: T) {
 }
 
 function createClient<const T extends IProcMap>(
-  map: IProcMap,
-  worker: AsyncWorker,
-  path: string,
-  id: string
+  map: IProcMap
 ): AsyncWorkerClient<T> {
-  return Object.entries(map).reduce(
-    (acc, [k]) => {
+  const worker = new AsyncWorker(map)
+
+  const recurseAssignProcedures = (
+    map: IProcMap,
+    path: string = ""
+  ): AsyncWorkerClient<T> => {
+    return Object.entries(map).reduce((acc, [k]) => {
       if (path === "" && (k === "exit" || k === "concurrently")) return acc
 
-      const p = path ? path + "." + k : k
-      const isTask = map[k] instanceof Task
-      const isCallable = isTask || typeof map[k] === "function"
+      const p = path ? `${path}.${k}` : k
+      const entry = map[k]
+      const isTask = entry instanceof Task
+      const isCallable = entry instanceof Function || isTask
+
       if (isCallable) {
         return Object.assign(acc, {
-          [k]: (...args: any[]) => worker.exec(p, isTask, ...args),
+          [k]: (...args: any[]) => worker.exec(p, ...args),
         })
       }
 
       return Object.assign(acc, {
-        [k]: createClient(map[k] as IProcMap, worker, p, id),
+        [k]: recurseAssignProcedures(entry, p),
       })
+    }, {} as AsyncWorkerClient<T>)
+  }
+
+  const res = Object.assign(recurseAssignProcedures(map), {
+    exit: () => worker.exit(),
+    concurrently: async <E>(
+      fn: (worker: AsyncWorkerClient<T>) => Promise<E>
+    ) => {
+      const client = createClient<T>(map)
+      const res = await fn(client)
+      client.exit()
+      return res
     },
-    (path === ""
-      ? {
-          exit: () => worker.exit(),
-          concurrently: async <E>(
-            fn: (worker: AsyncWorkerClient<T>) => Promise<E>
-          ) => {
-            const client = createClient(
-              map,
-              new AsyncWorker(map, id),
-              "",
-              id
-            ) as AsyncWorkerClient<T>
-            const res = await fn(client)
-            client.exit()
-            return res
-          },
-        }
-      : {}) as AsyncWorkerClient<T>
-  )
+  })
+  return res
 }

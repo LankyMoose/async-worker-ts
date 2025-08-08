@@ -1,5 +1,4 @@
 import { defineConfig } from "vite"
-import awtVitePlugin from "awt-workerify/dist/vitePlugin.js"
 
 export default defineConfig({
   build: {
@@ -14,5 +13,5 @@ export default defineConfig({
       "top-level-await": true,
     },
   },
-  plugins: [awtVitePlugin("dist/assets")],
+  plugins: [],
 })

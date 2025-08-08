@@ -6,10 +6,11 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Robby6Strings/async-worker-ts"
+    "url": "https://github.com/LankyMoose/async-worker-ts"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\"",
+    "dev": "tsc --watch",
     "build": "tsc"
   },
   "keywords": [
@@ -20,7 +21,7 @@
     "thread",
     "threads"
   ],
-  "author": "Robby6Strings",
+  "author": "LankyMoose",
   "license": "GNUV3",
   "devDependencies": {
     "@types/node": "^20.8.10"

@@ -4,140 +4,190 @@ import { AWTTransferable } from "./transferable.js"
 import type { IProcMap, ISerializedProcMap } from "./types.js"
 
 const isNode = typeof process !== "undefined" && process?.versions?.node
+type WorkerState = "none" | "pending" | "active"
 
 export class AsyncWorker {
-  #id: string
   #procMap: IProcMap
   #serializedProcMap: ISerializedProcMap
   #worker: OmniWorker | undefined = undefined
   #completionCallbacks: { [taskId: string]: (() => void)[] } = {}
+  #workerPromiseQueue: Array<(worker: OmniWorker) => void> = []
+  #workerState: WorkerState = "none"
 
-  constructor(procMap: IProcMap, id: string) {
+  constructor(procMap: IProcMap) {
     this.#procMap = procMap
     this.#serializedProcMap = this.#serializeProcMap(procMap)
-    this.#id = id
   }
 
-  exec(path: string, isTask: boolean, ...args: unknown[]) {
-    const id = crypto.randomUUID()
-    const wp = this.#getWorker()
+  exec(path: string, ...args: unknown[]): Promise<unknown> {
+    if (this.#workerState === "none") this.#initWorker()
+    const jobId = crypto.randomUUID()
+    const { promise: jobPromise, resolve, reject } = createPromise<unknown>()
 
-    const promise = new Promise(async (resolve, reject) => {
-      const worker = await wp
-      const handler = (event: MessageEvent) => {
-        const data = isNode ? event : event.data
-        const { id: resId, result, error, generator } = data
-        if (resId !== id) return
-        if (!("result" in data) && !("error" in data) && !("generator" in data))
-          return
+    const workerPromise = new Promise<OmniWorker>((resolve) => {
+      if (this.#worker) return resolve(this.#worker)
 
-        worker.removeEventListener("message", handler)
-
-        if (generator) return resolve(this.#createGenerator(worker, id, args))
-
-        this.#onTaskComplete(id)
-        return error ? reject(error) : resolve(result)
-      }
-      worker.addEventListener("message", handler)
-
-      const transferables = [] as Transferable[]
-      const _args = args.map((arg) =>
-        arg instanceof AWTTransferable
-          ? (() => {
-              const val = AWTTransferable.getTransferableValue(arg)
-              transferables.push(val)
-              return val
-            })()
-          : arg
-      )
-
-      worker.postMessage({ id, path, args: _args, isTask }, transferables)
+      this.#workerPromiseQueue.push(resolve)
     })
 
-    if (this.#isTask(path)) return this.#extendPromise(promise, wp, id)
-    return promise
+    const isTask = this.#isTask(path)
+
+    if (isTask) {
+      this.#wrapTaskPromise(jobId, jobPromise, workerPromise)
+    }
+
+    workerPromise.then((worker) => {
+      this.#createJobPromise(worker, jobId, path, isTask, ...args)
+        .then(resolve)
+        .catch(reject)
+    })
+
+    return jobPromise
   }
 
   exit() {
     if (this.#worker) this.#worker.terminate()
     this.#worker = undefined
+    this.#workerState = "none"
   }
 
-  #extendPromise(
-    promise: Promise<unknown>,
-    wp: Promise<OmniWorker>,
-    taskId: string
+  #initWorker() {
+    if (this.#workerState !== "none") return
+    this.#workerState = "pending"
+
+    OmniWorker.new(this.#serializedProcMap)
+      .then((worker) => {
+        this.#worker = worker
+        this.#workerState = "active"
+        while (this.#workerPromiseQueue.length) {
+          this.#workerPromiseQueue.shift()!(worker)
+        }
+      })
+      .catch((e) => {
+        this.#workerState = "none"
+        throw e
+      })
+  }
+
+  #createJobPromise(
+    worker: OmniWorker,
+    jobId: string,
+    path: string,
+    isTask: boolean,
+    ...args: unknown[]
   ) {
-    return Object.assign(promise, {
+    return new Promise(async (resolve, reject) => {
+      const handler = (event: MessageEvent) => {
+        const data = isNode ? event : event.data
+        const { id: resId, result, error, generator } = data
+
+        if (resId !== jobId) return
+        if (!("result" in data) && !("error" in data) && !("generator" in data))
+          return
+
+        worker.removeEventListener("message", handler)
+
+        if (generator) {
+          return resolve(this.#createGenerator(worker, jobId, args))
+        }
+
+        this.#onJobComplete(jobId)
+        return error ? reject(error) : resolve(result)
+      }
+      worker.addEventListener("message", handler)
+
+      const [_args, transferables] = this.#formatMessageArgs(args)
+      worker.postMessage(
+        { id: jobId, path, args: _args, isTask },
+        transferables
+      )
+    })
+  }
+
+  #wrapTaskPromise(
+    jobId: string,
+    jobPromise: Promise<unknown>,
+    workerPromise: Promise<OmniWorker>
+  ) {
+    Object.assign(jobPromise, {
       on: async (evt: string, callback: (data?: unknown) => unknown) => {
-        const worker = await wp
+        const worker = await workerPromise
+
         const emitHandler = async (e: MessageEvent) => {
           const msgData = isNode ? e : e.data
           if (!("event" in msgData)) return
-          const { id, mid, event, data } = msgData
-          if (id !== taskId || event !== evt) return
-          const cbRes = await callback(data)
-          let _data
-          const transferables = []
 
-          if (cbRes !== undefined) {
-            if (Array.isArray(cbRes)) {
-              _data = cbRes.map((item) =>
-                item instanceof AWTTransferable
-                  ? (() => {
-                      const val = AWTTransferable.getTransferableValue(item)
-                      transferables.push(val)
-                      return val
-                    })()
-                  : item
-              )
-            } else {
-              _data = cbRes
-              if (cbRes instanceof AWTTransferable) {
-                const val = AWTTransferable.getTransferableValue(cbRes)
-                transferables.push(val)
-                _data = val
-              }
-            }
+          const { id, mid, event, data } = msgData
+          if (id !== jobId || event !== evt) return
+
+          const cbRes = await callback(data)
+          if (cbRes === undefined) {
+            return worker.postMessage({ id, mid, data: undefined })
           }
 
-          worker.postMessage({ id, mid, data: _data }, transferables)
+          if (Array.isArray(cbRes)) {
+            const [data, transferables] = this.#formatMessageArgs(cbRes)
+            return worker.postMessage({ id, mid, data }, transferables)
+          }
+
+          if (cbRes instanceof AWTTransferable) {
+            const data = AWTTransferable.getTransferableValue(cbRes)
+            return worker.postMessage({ id, mid, data }, [data])
+          }
+
+          worker.postMessage({ id, mid, data: cbRes })
         }
 
         worker.addEventListener("message", emitHandler)
-        if (!this.#completionCallbacks[taskId])
-          this.#completionCallbacks[taskId] = []
+        if (!this.#completionCallbacks[jobId])
+          this.#completionCallbacks[jobId] = []
 
-        this.#completionCallbacks[taskId].push(() =>
+        this.#completionCallbacks[jobId].push(() =>
           worker.removeEventListener("message", emitHandler)
         )
 
-        return promise
+        return jobPromise
       },
     })
   }
 
-  #createGenerator(worker: OmniWorker, taskId: string, ...args: unknown[]) {
+  #formatMessageArgs(args: unknown[]): [unknown[], Transferable[]] {
+    const _args: unknown[] = []
+    const transferables: Transferable[] = []
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i]
+      if (!(arg instanceof AWTTransferable)) {
+        _args.push(arg)
+        continue
+      }
+      const val = AWTTransferable.getTransferableValue(arg)
+      transferables.push(val)
+      _args.push(val)
+    }
+    return [_args, transferables]
+  }
+
+  #createGenerator(worker: OmniWorker, jobId: string, ...args: unknown[]) {
     const generateTx = this.#createGeneratorTx
     return Object.assign(
       (async function* (...next: unknown[]) {
         while (true) {
-          const { value, done } = await generateTx(worker, taskId, "next", next)
-
+          const { value, done } = await generateTx(worker, jobId, "next", next)
           if (done) return value
+
           next = yield value
         }
       })(...args),
       {
-        return: (value: unknown) => generateTx(worker, taskId, "return", value),
-        throw: (error: unknown) => generateTx(worker, taskId, "throw", error),
+        return: (value: unknown) => generateTx(worker, jobId, "return", value),
+        throw: (error: unknown) => generateTx(worker, jobId, "throw", error),
       }
     ) as AsyncGenerator<unknown, unknown, unknown>
   }
 
   #createGeneratorTx(
     worker: OmniWorker,
-    taskId: string,
+    jobId: string,
     key: string,
     ...args: unknown[]
   ) {
@@ -147,26 +197,21 @@ export class AsyncWorker {
         if (!(key in data)) return
         const { id: responseId, [key]: value, done } = data
 
-        if (responseId !== taskId) return
+        if (responseId !== jobId) return
         worker.removeEventListener("message", handler)
         res({ value, done })
       }
 
       if (args && args.length > 0) await Promise.all(args)
       worker.addEventListener("message", handler)
-      worker.postMessage({ id: taskId, [key]: args })
+      worker.postMessage({ id: jobId, [key]: args })
     })
   }
 
-  async #getWorker() {
-    return (this.#worker =
-      this.#worker ?? (await OmniWorker.new(this.#serializedProcMap, this.#id)))
-  }
-
-  #onTaskComplete(taskId: string) {
-    if (this.#completionCallbacks[taskId]) {
-      this.#completionCallbacks[taskId].forEach((cb) => cb())
-      delete this.#completionCallbacks[taskId]
+  #onJobComplete(jobId: string) {
+    if (this.#completionCallbacks[jobId]) {
+      this.#completionCallbacks[jobId].forEach((cb) => cb())
+      delete this.#completionCallbacks[jobId]
     }
     return true
   }
@@ -193,5 +238,23 @@ export class AsyncWorker {
     const scope = keys.reduce((acc, key) => acc[key], this.#procMap)
     // @ts-ignore
     return scope[last] instanceof Task
+  }
+}
+
+function createPromise<T>(): {
+  promise: Promise<T>
+  resolve: (value: T) => void
+  reject: (reason?: any) => void
+} {
+  let resolve: (value: T | PromiseLike<T>) => void
+  let reject: (reason?: any) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return {
+    promise,
+    resolve: (value: T | PromiseLike<T>) => resolve(value),
+    reject: (reason?: any) => reject(reason),
   }
 }

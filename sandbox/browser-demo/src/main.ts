@@ -5,11 +5,11 @@ import worker from "./myWorker.worker.js"
 
 //await worker.teeest()
 
-const gen = await worker.generatorTest()
-for await (let i of gen) {
-  console.log(i)
-}
-await worker.exit()
+// const gen = await worker.generatorTest()
+// for await (let i of gen) {
+//   console.log(i)
+// }
+// await worker.exit()
 
 const appEl = document.getElementById("app")!
 
@@ -53,11 +53,13 @@ function playPingPong() {
     return w
       .pingPong()
       .on("ping", () => {
+        if (i % 100 === 0) console.log("ping", i)
         progress.value = settings.ping_pong_iters - i
         if (--i > 0) return "pong"
         li.remove()
       })
       .then((res) => console.log("task complete", res))
+      .catch((e) => console.error(e))
   })
 }
 
@@ -173,13 +175,20 @@ async function doDoublerTest(chunked = false) {
   const durations = []
   const arrSize = 4_000_000
   const numThreads = 4
-
+  console.log("running doubler test", {
+    iterations,
+    arrSize,
+    numThreads,
+  })
+  const start = performance.now()
   for (let i = 0; i < iterations; i++) {
     const duration = await (chunked
       ? doubler_chunked(arrSize, numThreads)
       : doubler(arrSize))
     durations.push(duration)
   }
+  const duration = performance.now() - start
+
   const shortest = Math.min(...durations)
   const average = durations.reduce((a, b) => a + b) / durations.length
   console.table({
@@ -187,6 +196,7 @@ async function doDoublerTest(chunked = false) {
     ["shortest (ms)"]: Math.floor(shortest),
     ["average (ms)"]: Math.floor(average),
     chunked,
+    duration,
   })
 }
 
