@@ -1,26 +1,10 @@
-# async-worker-ts
+# **async-worker-ts** 🔱
 
-`async-worker-ts` is a lightweight TypeScript package designed to simplify the execution of asynchronous workers in TypeScript applications. It provides a simple and efficient way to manage asynchronous tasks in the background, allowing you to offload time-consuming operations without blocking the main thread.
+#### _A type-safe package designed to simplify the usage of worker threads on the server or browser._
 
-## Features
+<br />
 
-- **Asynchronous Workers:** Easily create and run asynchronous workers in TypeScript.
-- **True multithreading:** Execute procedures in multiple threads simultaneously to improve performance.
-- **Promise-based API:** Simple and intuitive API based on Promises for easy integration.
-
-## Installation
-
-Install the package using npm:
-
-```bash
-npm install async-worker-ts
-```
-
-or
-
-```bash
-pnpm add async-worker-ts
-```
+## Usage:
 
 ```ts
 import createWorker, { task } from "async-worker-ts"
@@ -56,9 +40,9 @@ await worker.exit() // terminates the worker thread
 ## Accessing procedures within procedures:
 
 ```ts
-import useWorker from "async-worker-ts"
+import createWorker from "async-worker-ts"
 
-const worker = useWorker({
+const worker = createWorker({
   /**
    * NB; the 'this' keyword is available in procedures declared as anything
    * but arrow functions and can be used to access other procedures.
@@ -79,9 +63,9 @@ const worker = useWorker({
 ## Emitting data via Tasks:
 
 ```ts
-import useWorker, { task } from "async-worker-ts"
+import createWorker, { task } from "async-worker-ts"
 
-const worker = useWorker({
+const worker = createWorker({
   calculatePi: task(function (iterations: number) {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
@@ -105,9 +89,9 @@ await worker
 ## Concurrency and batching:
 
 ```ts
-import useWorker from "async-worker-ts"
+import createWorker from "async-worker-ts"
 
-const worker = useWorker({
+const worker = createWorker({
   calculatePi: (iterations: number) => {
     let pi = 0
     for (let i = 0; i < iterations; i++) {
@@ -134,9 +118,9 @@ for (let i = 0; i < 4; i++) {
 ## Transferables:
 
 ```ts
-import useWorker, { transfer } from "async-worker-ts"
+import createWorker, { transfer } from "async-worker-ts"
 
-const worker = useWorker({
+const worker = createWorker({
   drawToCanvas: (OffscreenCanvas) => {
     // ... do things with the canvas here as if we were on the main thread
   },
@@ -154,59 +138,9 @@ worker.drawToCanvas(transfer(offscreenCvs))
 
 <br />
 
-## Dynamic imports and module resolution:
-
-#### _Importing modules requires a bundler for module resolution because procedures are serialized and executed in a different scope, rendering relative paths useless. I created <a href="https://www.npmjs.com/package/">awt-bundler</a> as a simple bundler for using this package with Node._
-
-_someModule.ts:_
-
-```ts
-export const someFunction = () => {
-  // ...
-}
-```
-
-_myWorker.ts:_
-
-```ts
-import useWorker, { AWTClientBuilder } from "async-worker-ts"
-
-const worker = useWorker({
-  doSomething: async () => {
-    const { someFunction } = await import("./someModule.ts")
-    return someFunction()
-  },
-})
-
-// or:
-
-const workerWithCachedImports = new AWTClientBuilder()
-  .withImportCache(async () => {
-    const { someFunction } = await import("./someModule.js")
-    return { someFunction }
-  })
-  .build(function ({ someFunction }) {
-    return {
-      doSomething: () => {
-        return someFunction()
-      },
-    }
-  })
-```
-
-<br />
-
-# God help your CPU. 🙏
+# That's it! God help your CPU 😀
 
 <p align="center">
   <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZmc4dm1zazE4OXpmcWxtcXByOWp1a3F5cGJicTc1eHZvYTBvZXQxOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbtDDSvWErdf2/giphy.gif" alt="Richard Ayoade using async-worker-ts" />
 
 </p>
-
-### Contributing
-
-We welcome contributions from the community. To contribute to async-worker-ts, please follow our contribution guidelines.
-
-### License
-
-This package is licensed under the GNUV3 License - see the `LICENSE` file for details.
